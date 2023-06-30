@@ -33,7 +33,7 @@ ALLOWED_HOSTS = ['127.0.0.1', 'darioveramunoz.pythonanywhere.com']
 MESSAGE_STORAGE = "django.contrib.messages.storage.cookie.CookieStorage"
 
 
-LOGOUT_REDIRECT_URL ='/'
+LOGOUT_REDIRECT_URL = '/'
 
 # Define la ubicación del archivo de registros
 # LOGS_DIR = os.path.join(BASE_DIR, 'logs')
@@ -65,7 +65,7 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'rest_framework',
     'schedule',
-    'rest_framework.authtoken', 
+    'rest_framework.authtoken',
     'django.contrib.sites',
     'allauth',
     'allauth.account',
@@ -79,7 +79,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    
+
 ]
 
 SITE_ID = 1
@@ -131,8 +131,10 @@ WSGI_APPLICATION = 'conejofurioso.wsgi.application'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'erreapectm@gmail.com'  # Tu dirección de correo electrónico
-EMAIL_HOST_PASSWORD = 'pouwksiilwdoiblc'  # Tu contraseña de correo electrónico
+# Tu dirección de correo electrónico
+EMAIL_HOST_USER = 'erreapectm@gmail.com'
+# Tu contraseña de correo electrónico
+EMAIL_HOST_PASSWORD = 'pouwksiilwdoiblc'
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
@@ -143,23 +145,23 @@ API_BASE_URL = 'http://127.0.0.1:8000/api/'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
+#    }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'musicprodb',
+        'USER': 'musicpro',
+        'PASSWORD': 'conejofurioso2212.',
+        'HOST': 'localhost',
+        'PORT': '3306',
     }
 }
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'conejo_furioso',
-#         'USER': 'conejo_furioso',
-#         'PASSWORD': 'conejofurioso2212.',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
-#     }
-# }
 
 
 # Password validation
@@ -182,16 +184,16 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES':[
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PARSER_CLASSES': (
-    'rest_framework.parsers.JSONParser',
-    'rest_framework.parsers.FormParser',
-    'rest_framework.parsers.MultiPartParser',
-),
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ),
 }
 
 

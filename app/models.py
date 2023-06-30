@@ -10,6 +10,7 @@ class Category(models.Model):
     name = models.CharField(max_length=50)
     description = models.TextField(max_length=200)
     image = models.ImageField(upload_to="categories/", blank=True, null=True)
+    sub_category = models.CharField(max_length=50, default='default_value')
 
     def __str__(self):
         return self.name
@@ -34,6 +35,7 @@ class Product(models.Model):
     image = models.ImageField(upload_to='products/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_rentable = models.BooleanField(default=False)
+    brand = models.CharField(max_length=50, default='default_value')
 
     def __str__(self):
         return self.name

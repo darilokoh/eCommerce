@@ -43,6 +43,7 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Descripcion</th>
+                            <th>Sub Categoría</th>
                             <th>Imagen</th>
                             {% if perms.app.change_category %}
                             <th>Modificar</th>
@@ -61,6 +62,7 @@
                     <tr>
                         <td>{{c.name | title }}</td>
                         <td>{{c.description }}</td>
+                        <td>{{c.sub_category }}</td>
                         <td>
                             {% if c.image %}
                                 <img src="{{ c.image }}" alt="Imagen de la categoria" style="max-width: 50px; max-height: 50px;">

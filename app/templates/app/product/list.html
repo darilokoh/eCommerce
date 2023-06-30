@@ -65,6 +65,7 @@
                     <thead>
                         <tr>
                             <th>Nombre</th>
+                            <th>Marca</th>
                             <th>Descripción</th>
                             <th>Valor</th>
                             <th>Categoría</th>
@@ -90,6 +91,7 @@
 
                     <tr>
                         <td>{{ p.name | title }}</td>
+                        <td>{{ p.brand | title }}</td>
                         <td>{{ p.description }}</td>
                         <td>${{ p.price | intcomma }}</td>
                         <td>{{ p.category_name | title }}</td>

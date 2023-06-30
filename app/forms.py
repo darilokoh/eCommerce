@@ -107,7 +107,8 @@ class ProductForm(forms.ModelForm):
             'is_new': '¿Nuevo?',
             'is_featured': '¿Destacado?',
             'image': 'Imagen',
-            'is_rentable': '¿Arrendable?'
+            'is_rentable': '¿Arrendable?',
+            'brand': 'Marca'
         }
 
 class CustomUserCreationForm(UserCreationForm):
@@ -126,7 +127,8 @@ class CategoryForm(forms.ModelForm):
         labels = {
             'name': 'Nombre',
             'description': 'Descripcion',
-            'image': 'Imagen'
+            'image': 'Imagen',
+            'sub_category': 'Tipo de instrumento'
         }
 
 class UsuariosForm(ModelForm):

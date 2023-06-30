@@ -71,6 +71,7 @@ class ProductViewset(viewsets.ModelViewSet):
         min_price = self.request.GET.get('min_price_filter')
         max_price = self.request.GET.get('max_price_filter')
         is_rentable = self.request.GET.get('is_rentable')
+        brand = self.request.GET.get('brand')
 
         if name:
             products = products.filter(name__contains=name)
@@ -91,6 +92,8 @@ class ProductViewset(viewsets.ModelViewSet):
         #filtro para rentable
         if is_rentable:
             products = products.filter(is_rentable=True)
+        if brand:
+            products = products.filter(brand__contains=brand)
 
         return products
     
@@ -475,6 +478,7 @@ def add_product(request):
                     is_featured = form.cleaned_data['is_featured']
                     image = form.cleaned_data['image']
                     is_rentable = form.cleaned_data['is_rentable']
+                    brand = form.cleaned_data['brand']
 
                     product_data = {
                         'name': name,
@@ -485,6 +489,7 @@ def add_product(request):
                         'stock': stock,
                         'is_featured': is_featured,
                         'is_rentable': is_rentable,
+                        'brand': brand,
                     }
 
                     response = requests.post(
@@ -592,6 +597,7 @@ def update_product(request, id):
                         is_featured = form.cleaned_data['is_featured']
                         image = form.cleaned_data['image']
                         is_rentable = form.cleaned_data['is_rentable']
+                        brand = form.cleaned_data['brand']
 
                         # Crear un nuevo diccionario con los datos actualizados
                         updated_data = {
@@ -602,7 +608,8 @@ def update_product(request, id):
                             'category': category_id,
                             'stock': stock,
                             'is_featured': is_featured,
-                            'is_rentable': is_rentable
+                            'is_rentable': is_rentable,
+                            'brand': brand,
                         }
 
                         # Actualizar el producto a través de la API
@@ -865,11 +872,13 @@ def update_category(request, id):
                     if not error_message:
                         description = form.cleaned_data['description']
                         image = form.cleaned_data['image']
+                        sub_category = form.cleaned_data['sub_category']
 
                         # Crear un nuevo diccionario con los datos actualizados
                         updated_data = {
                             'name': name,
-                            'description': description
+                            'description': description,
+                            'sub_category': sub_category,
                         }
 
                         # Actualizar la categoría a través de la API

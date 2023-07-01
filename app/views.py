@@ -108,6 +108,23 @@ class ContactViewSet(viewsets.ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
 
+    def get_queryset(self):
+        queryset = Contact.objects.all()
+
+        # Obtener el parámetro de consulta 'status' de la URL
+        status = self.request.query_params.get('status', None)
+        if status is not None and status != '':
+            # Filtrar los contactos por estado
+            queryset = queryset.filter(status=status)
+
+        # Obtener el parámetro de consulta 'query_type_id' de la URL
+        query_type_id = self.request.query_params.get('query_type_id', None)
+        if query_type_id is not None and query_type_id != '':
+            # Filtrar los contactos por ID del tipo de consulta
+            queryset = queryset.filter(query_type_id=query_type_id)
+
+        return queryset
+
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         status = request.data.get('status')
@@ -144,9 +161,10 @@ def home(request):
     }
     
     return render(request, 'app/home.html', data)
+
 @csrf_exempt
 @api_view(['GET','POST'])
-@permission_classes((IsAuthenticated,))
+# @permission_classes((IsAuthenticated,))
 def catalogue(request):
     # Obtenemos los filtros desde el html
     name_filter = request.GET.get('name', '')
@@ -263,20 +281,46 @@ def update_contact_status(request, contact_id):
 
 @permission_required('app.view_contact')
 def list_contact(request):
-    response = requests.get(settings.API_BASE_URL + 'contact/')
-    contacts = response.json()
-    page = request.GET.get('page', 1)
+    status = request.GET.get('status', '')
+    query_type = request.GET.get('query_type', '')
+
+    response_query_types = requests.get(settings.API_BASE_URL + 'query-type/')
+    query_types = response_query_types.json()
+
+    params = {}
+    if status and status != 'Todos':
+        params['status'] = status
+    if query_type and query_type != 'Todos':
+        params['query_type'] = query_type
+
+    response = requests.get(settings.API_BASE_URL + 'contact/', params=params)
+    if response.status_code == 200:
+        contacts = response.json()
+    else:
+        contacts = []
+
+    # Filtrar los contactos localmente en función del tipo de contacto seleccionado
+    if query_type and query_type != 'Todos':
+        contacts = [contact for contact in contacts if contact['query_type_name'] == query_type]
+
+    paginator = Paginator(contacts, 5)
+    page = request.GET.get('page')
 
     try:
-        paginator = Paginator(contacts, 5)
         contacts = paginator.page(page)
-    except:
-        raise Http404
+    except PageNotAnInteger:
+        contacts = paginator.page(1)
+    except EmptyPage:
+        contacts = paginator.page(paginator.num_pages)
 
     data = {
         'entity': contacts,
-        'paginator': paginator
+        'paginator': paginator,
+        'query_types': query_types,
+        'selected_status': status,
+        'selected_query_type': query_type,
     }
+
     return render(request, 'app/contact/list.html', data)
 
 #VISTAS DE QUERYTYPE

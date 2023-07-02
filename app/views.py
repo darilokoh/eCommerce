@@ -142,15 +142,18 @@ class QueryTypeViewset(viewsets.ModelViewSet):
     queryset = QueryType.objects.all()
     serializer_class = QueryTypeSerializer
 
-class RentalOrderViewSet(viewsets.ViewSet):
-    def list(self, request):
-        rental_orders = RentalOrder.objects.all()
-        serializer = RentalOrderSerializer(rental_orders, many=True)
-        return Response(serializer.data)
+class RentalOrderViewSet(viewsets.ModelViewSet):
+    # def list(self, request):
+    #     rental_orders = RentalOrder.objects.all()
+    #     serializer = RentalOrderSerializer(rental_orders, many=True)
+    #     return Response(serializer.data)
+    queryset = RentalOrder.objects.all()
+    serializer_class = RentalOrderSerializer
 
 class RentalOrderItemViewSet(viewsets.ModelViewSet):
     queryset = RentalOrderItem.objects.all()
     serializer_class = RentalOrderItemSerializer
+ 
     
 #VISTAS INICIALES
 def home(request):
@@ -269,7 +272,7 @@ def rental_service(request):
 
                         return JsonResponse({'message': 'La solicitud de arriendo ha sido enviada correctamente'})
                     else:
-                        return JsonResponse({'error': 'Error al enviar la solicitud'})
+                        return JsonResponse({'error': 'Error al enviar la solicitud view'})
 
                 except Exception as e:
                     print(f"Error en el servidor: {str(e)}")
@@ -1183,7 +1186,8 @@ def order_list(request):
     total_products_sold = OrderItem.objects.filter(order__in=orders).aggregate(total_sold=Sum('amount'))['total_sold']
 
     # Obtener los 4 productos más vendidos considerando los filtros
-    top_products = OrderItem.objects.filter(order__in=orders).values('product_name').annotate(total_amount=Count('product_name')).order_by('-total_amount')[:4]
+    # top_products = OrderItem.objects.filter(order__in=orders).values('product_name').annotate(total_amount=Count('product_name')).order_by('-total_amount')[:4]
+    top_products = OrderItem.objects.filter(order__in=orders).values('product_name').annotate(total_amount=Sum('amount')).order_by('-total_amount')[:4]
 
     paginator = Paginator(orders, 5)
     try:

@@ -38,7 +38,7 @@ router.register('category', CategoryViewset)
 router.register('contact', ContactViewSet, basename='contact')
 router.register('query-type', QueryTypeViewset, basename='query-type')
 router.register(r'rental-orders', RentalOrderViewSet, basename='rental-orders')
-router.register(r'rental-orders-items', RentalOrderItemViewSet)
+router.register(r'rental-order-items', RentalOrderItemViewSet)
 
 
 urlpatterns = [

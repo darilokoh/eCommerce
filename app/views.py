@@ -43,6 +43,11 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response as apiResponse
 from rest_framework.views import APIView
 
+
+# IMPORTS LOGICA TABLA ORDER ITEM
+from django.db.models import Sum
+from .models import OrderItem
+
 tok = None
 
 def is_staff(user):
@@ -1134,3 +1139,6 @@ def list_rental_order(request):
     }
     return render(request, "app/rental_order/list.html", data)
 
+def calculate_total_sold(products):
+    total_sold = OrderItem.objects.filter(products=products).aggregate(total=Sum('quantity'))['total']
+    return total_sold if total_sold else 0

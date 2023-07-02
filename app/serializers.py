@@ -4,6 +4,7 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from django.utils.dateformat import DateFormat
 
+
 class CategorySerializer(serializers.ModelSerializer):
 
     def validate_name(self, value):

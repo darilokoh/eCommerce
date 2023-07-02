@@ -1214,18 +1214,11 @@ def obtain_token(request):
 
 def list_rental_order(request):
     response = requests.get(settings.API_BASE_URL + 'rental-orders/')
-    rental_orders_data = response.json()
-
-    rental_order_ids = [ro_data['id'] for ro_data in rental_orders_data]
-
-    rental_orders = RentalOrder.objects.filter(id__in=rental_order_ids)
-    serializer = RentalOrderSerializer(rental_orders, many=True)
-    serialized_rental_orders = serializer.data
-
+    rental_orders = response.json()
     page = request.GET.get('page', 1)
-    paginator = Paginator(serialized_rental_orders, 5)
 
     try:
+        paginator = Paginator(rental_orders, 5)
         rental_orders = paginator.page(page)
     except:
         raise Http404

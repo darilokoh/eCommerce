@@ -7,7 +7,8 @@ from .views import home, rental_service, catalogue, contact,\
     list_category, update_category, delete_category, admin_panel,\
     ContactViewSet,pago, list_contact,\
     QueryTypeViewset, update_contact_status, add_query_type, list_query_type,\
-    update_query_type, delete_query_type, RentalOrderViewSet, list_rental_order
+    update_query_type, delete_query_type, RentalOrderViewSet, list_rental_order,\
+    RentalOrderItemViewSet
 
 
 from unicodedata import name
@@ -37,6 +38,7 @@ router.register('category', CategoryViewset)
 router.register('contact', ContactViewSet, basename='contact')
 router.register('query-type', QueryTypeViewset, basename='query-type')
 router.register(r'rental-orders', RentalOrderViewSet)
+router.register(r'rental-orders-items', RentalOrderItemViewSet)
 
 
 urlpatterns = [

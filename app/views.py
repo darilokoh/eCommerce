@@ -1,18 +1,19 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import ContactForm, ProductForm, CustomUserCreationForm, CategoryForm, QueryTypeForm, RentalOrderForm, RecuperarForm
 from django.contrib import messages
+from datetime import timedelta
 from django.contrib.auth import authenticate, login
-from .models import Product, Category, Contact, QueryType, RentalOrder
+from .models import Product, Category, Contact, QueryType, RentalOrder, RentalOrderItem
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import Http404, HttpResponse, JsonResponse
 from rest_framework import viewsets, serializers
-from .serializers import ProductSerializer, CategorySerializer, ContactSerializer, QueryTypeSerializer, RentalOrderSerializer,LoginSerializer
+from .serializers import ProductSerializer, CategorySerializer, ContactSerializer, QueryTypeSerializer, RentalOrderSerializer, RentalOrderItemSerializer, LoginSerializer
 import requests
 from django.contrib.auth.decorators import login_required, permission_required
 from app.cart import Cart
 from rest_framework.response import Response
 from django.conf import settings
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q
 from django.views.decorators.csrf import csrf_exempt
 from .models import Order,OrderItem
 from django.core.mail import send_mail
@@ -140,6 +141,10 @@ class QueryTypeViewset(viewsets.ModelViewSet):
 class RentalOrderViewSet(viewsets.ModelViewSet):
     queryset = RentalOrder.objects.all()
     serializer_class = RentalOrderSerializer
+
+class RentalOrderItemViewSet(viewsets.ModelViewSet):
+    queryset = RentalOrderItem.objects.all()
+    serializer_class = RentalOrderItemSerializer
     
 #VISTAS INICIALES
 def home(request):
@@ -218,29 +223,54 @@ def rental_service(request):
                 'deliver_date': deliver_date_iso,  # Utilizar la cadena de texto en lugar del objeto datetime
             }
 
-            # Obtener la lista de productos seleccionados
-            products_selected = request.POST.getlist('products')
-            products_selected = [int(product_id) for product_id in products_selected if product_id.isdigit()]
+            existing_order = RentalOrder.objects.filter(
+                Q(rut=rental_order_data['rut']) &
+                Q(deliver_date__gte=deliver_date - timedelta(minutes=15)) &
+                Q(deliver_date__lte=deliver_date + timedelta(minutes=15))
+            ).exists()
 
-            rental_order_data['products'] = products_selected  # Agregar la lista de productos seleccionados
+            if existing_order:
+                return JsonResponse({'error': 'Ya existe una orden de renta con los mismos datos'})
+            else:
+                try:
+                    # Crear la orden a través de la API
+                    rental_order_response = requests.post(settings.API_BASE_URL + 'rental-orders/', json=rental_order_data)
+                    if rental_order_response.status_code == 201:
+                        rental_order = rental_order_response.json()
+                        rental_order_id = rental_order['id']  # Obtener el ID de la orden de renta creada
 
-            try:
-                # Crear la orden a través de la API
-                rental_order_response = requests.post(settings.API_BASE_URL + 'rental-orders/', json=rental_order_data)
-                if rental_order_response.status_code == 201:
-                    rental_order = rental_order_response.json()
+                        # Obtener la lista de productos seleccionados y sus cantidades
+                        products_selected = request.POST.getlist('products')
+                        quantities = [int(request.POST.get(f'quantity_{product_id}', 1)) for product_id in products_selected]
 
-                    # Agregar los productos a la orden a través de la API
-                    product_ids = [str(product_id) for product_id in products_selected]  # Convertir los IDs de productos a cadena de texto
-                    add_product_url = settings.API_BASE_URL + f'rental-orders/{rental_order["id"]}/add-product/?products={",".join(product_ids)}'
-                    requests.post(add_product_url)
+                        rental_order_items = []
+                        for product_id, quantity in zip(products_selected, quantities):
+                            product = Product.objects.get(id=product_id)  # Obtener el producto de la base de datos
+                            rental_order_item = RentalOrderItem(
+                                rental_order_id=rental_order_id,  # Asignar el ID de la orden de renta
+                                product_name=product.name,
+                                product_price=product.price,
+                                amount=quantity
+                            )
+                            rental_order_items.append(rental_order_item)
 
-                    return JsonResponse({'message': 'La solicitud de arriendo ha sido enviado correctamente'})
-                else:
-                    return JsonResponse({'error': 'Error al enviar la solicitud'})
+                        RentalOrderItem.objects.bulk_create(rental_order_items, batch_size=100)  # Especificar un tamaño de lote adecuado
 
-            except Exception as e:
-                return JsonResponse({'error': 'Error en el servidor'})
+                        # Agregar los productos a la orden a través de la API
+                        product_ids = [str(product_id) for product_id in products_selected]  # Convertir los IDs de productos a cadena de texto
+                        add_product_url = settings.API_BASE_URL + f'rental-orders/{rental_order["id"]}/add-product/?products={",".join(product_ids)}'
+                        requests.post(add_product_url)
+
+                        return JsonResponse({'message': 'La solicitud de arriendo ha sido enviada correctamente'})
+                    else:
+                        return JsonResponse({'error': 'Error al enviar la solicitud'})
+
+                except Exception as e:
+                    print(f"Error en el servidor: {str(e)}")
+                    return JsonResponse({'error': 'Error en el servidor view'})
+
+        else:
+            return JsonResponse({'error': 'Error en los datos del formulario'})
 
     else:
         form = RentalOrderForm()

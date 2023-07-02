@@ -37,7 +37,7 @@ router.register('product', ProductViewset)
 router.register('category', CategoryViewset)
 router.register('contact', ContactViewSet, basename='contact')
 router.register('query-type', QueryTypeViewset, basename='query-type')
-router.register(r'rental-orders', RentalOrderViewSet)
+router.register(r'rental-orders', RentalOrderViewSet, basename='rental-orders')
 router.register(r'rental-orders-items', RentalOrderItemViewSet)
 
 

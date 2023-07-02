@@ -139,9 +139,11 @@ class QueryTypeViewset(viewsets.ModelViewSet):
     queryset = QueryType.objects.all()
     serializer_class = QueryTypeSerializer
 
-class RentalOrderViewSet(viewsets.ModelViewSet):
-    queryset = RentalOrder.objects.all()
-    serializer_class = RentalOrderSerializer
+class RentalOrderViewSet(viewsets.ViewSet):
+    def list(self, request):
+        rental_orders = RentalOrder.objects.all()
+        serializer = RentalOrderSerializer(rental_orders, many=True)
+        return Response(serializer.data)
 
 class RentalOrderItemViewSet(viewsets.ModelViewSet):
     queryset = RentalOrderItem.objects.all()
@@ -1212,16 +1214,51 @@ def obtain_token(request):
             })
     return Response({'error': 'Credenciales inválidas.'}, status=400)
 
+#LIST RENTAL ORDER A TRAVES DE CONSULTA LOCAL
+# def list_rental_order(request):
+#     rental_orders = RentalOrder.objects.all()
+#     page = request.GET.get('page', 1)
+
+#     try:
+#         paginator = Paginator(rental_orders, 5)
+#         rental_orders = paginator.page(page)
+#     except:
+#         raise Http404
+
+#     data = {
+#         'entity': rental_orders,
+#         'paginator': paginator
+#     }
+#     return render(request, "app/rental_order/list.html", data)
+
+#LIST RENTAL ORDER A TRAVES DE CONSULTA API
 def list_rental_order(request):
     response = requests.get(settings.API_BASE_URL + 'rental-orders/')
+
+    if response.status_code != 200:
+        # Si la respuesta no es válida, devuelve un HttpResponse con un mensaje de error
+        error_message = 'Error al obtener los datos de la API'
+        return HttpResponse(error_message, status=500)
+
     rental_orders = response.json()
+    paginator = Paginator(rental_orders, 5)
     page = request.GET.get('page', 1)
 
     try:
-        paginator = Paginator(rental_orders, 5)
         rental_orders = paginator.page(page)
     except:
-        raise Http404
+        # Si no se puede paginar correctamente, devuelve un HttpResponse con un mensaje de error
+        error_message = 'Error al paginar los datos'
+        return HttpResponse(error_message, status=500)
+
+    # Calcular el precio acumulado por cada RentalOrder
+    for rental_order in rental_orders:
+        total_price = 0
+        for item in rental_order['items']:
+            product_price = float(item['product_price'])
+            amount = item['amount']
+            total_price += product_price * amount
+        rental_order['total_price'] = total_price
 
     data = {
         'entity': rental_orders,

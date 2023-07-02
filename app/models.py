@@ -108,6 +108,10 @@ class RentalOrder(models.Model):
     def __str__(self):
         return self.name
     
+    # @property
+    # def items(self):
+    #     return self.rentalorderitem_set.all()
+    
 class RentalOrderItem(models.Model):
     rental_order = models.ForeignKey(RentalOrder, on_delete=models.CASCADE)
     product_name = models.CharField(max_length=100)

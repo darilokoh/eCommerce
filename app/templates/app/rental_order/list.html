@@ -25,6 +25,7 @@
                             <th>Fecha de creacion</th>
                             <th>Fecha de entrega</th>
                             <th>Items</th>
+                            <th>Acumulado</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -38,11 +39,12 @@
                                 <td>{{ ro.deliver_date }}</td>
                                 <td>
                                     <ul>
-                                        {% for item in ro.items.all %}
+                                        {% for item in ro.items %}
                                         <li>{{ item.product_name }} - Cantidad: {{ item.amount }}</li>
                                         {% endfor %}
                                     </ul>
                                 </td>
+                                <td>${{ ro.total_price|intcomma }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>

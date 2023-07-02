@@ -103,7 +103,7 @@ class RentalOrder(models.Model):
     address = models.CharField(max_length=200)
     phone = models.CharField(max_length=20)
     deliver_date = models.DateTimeField()
-    
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name

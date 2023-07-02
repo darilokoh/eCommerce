@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import ContactForm, ProductForm, CustomUserCreationForm, CategoryForm, QueryTypeForm, RentalOrderForm, RecuperarForm
 from django.contrib import messages
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.contrib.auth import authenticate, login
 from .models import Product, Category, Contact, QueryType, RentalOrder, RentalOrderItem
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -9,6 +9,7 @@ from django.http import Http404, HttpResponse, JsonResponse
 from rest_framework import viewsets, serializers
 from .serializers import ProductSerializer, CategorySerializer, ContactSerializer, QueryTypeSerializer, RentalOrderSerializer, RentalOrderItemSerializer, LoginSerializer
 import requests
+from django.db import transaction
 from django.contrib.auth.decorators import login_required, permission_required
 from app.cart import Cart
 from rest_framework.response import Response
@@ -44,7 +45,7 @@ from .models import Tokens
 from rest_framework.authtoken.views import ObtainAuthToken
 from django.http import HttpRequest
 from rest_framework.views import APIView
-
+from django.utils import timezone
 from django.http import HttpRequest
 from rest_framework.views import APIView
 
@@ -225,8 +226,7 @@ def rental_service(request):
 
             existing_order = RentalOrder.objects.filter(
                 Q(rut=rental_order_data['rut']) &
-                Q(deliver_date__gte=deliver_date - timedelta(minutes=15)) &
-                Q(deliver_date__lte=deliver_date + timedelta(minutes=15))
+                Q(created_at__gte=timezone.now() - timedelta(minutes=15))
             ).exists()
 
             if existing_order:
@@ -241,6 +241,7 @@ def rental_service(request):
 
                         # Obtener la lista de productos seleccionados y sus cantidades
                         products_selected = request.POST.getlist('products')
+                        print(request.POST)
                         quantities = [int(request.POST.get(f'quantity_{product_id}', 1)) for product_id in products_selected]
 
                         rental_order_items = []
@@ -1213,11 +1214,18 @@ def obtain_token(request):
 
 def list_rental_order(request):
     response = requests.get(settings.API_BASE_URL + 'rental-orders/')
-    rental_orders = response.json()
+    rental_orders_data = response.json()
+
+    rental_order_ids = [ro_data['id'] for ro_data in rental_orders_data]
+
+    rental_orders = RentalOrder.objects.filter(id__in=rental_order_ids)
+    serializer = RentalOrderSerializer(rental_orders, many=True)
+    serialized_rental_orders = serializer.data
+
     page = request.GET.get('page', 1)
+    paginator = Paginator(serialized_rental_orders, 5)
 
     try:
-        paginator = Paginator(rental_orders, 5)
         rental_orders = paginator.page(page)
     except:
         raise Http404

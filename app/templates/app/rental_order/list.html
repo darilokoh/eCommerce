@@ -22,24 +22,30 @@
                             <th>Nombre</th>
                             <th>Direccion</th>                         
                             <th>Celular</th>
+                            <th>Fecha de creacion</th>
                             <th>Fecha de entrega</th>
+                            <th>Items</th>
                         </tr>
                     </thead>
                     <tbody>
+                        {% for ro in entity %}
+                            <tr>
+                                <td>{{ ro.rut }}</td>
+                                <td>{{ ro.name }}</td>
+                                <td>{{ ro.address }}</td>
+                                <td>{{ ro.phone }}</td>
+                                <td>{{ ro.created_at }}</td>
+                                <td>{{ ro.deliver_date }}</td>
+                                <td>
+                                    <ul>
+                                        {% for item in ro.items.all %}
+                                        <li>{{ item.product_name }} - Cantidad: {{ item.amount }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </td>
+                            </tr>
+                        {% endfor %}
                     </tbody>
-
-                    {% for ro in entity %}
-
-                    <tr>
-                        <td>{{ ro.rut }}</td>
-                        <td>{{ ro.name }}</td>
-                        <td>{{ ro.address }}</td>
-                        <td>{{ ro.phone }}</td>
-                        <td>{{ ro.deliver_date }}</td>
-                    </tr>
-
-                    {% endfor %}
-
                 </table>
                 <hr>
                 <div>
@@ -49,7 +55,6 @@
 
             <br>
             <div class="row list-buttons">
-
                 <div class="col">
                     <a href="{% url 'home' %}">
                         <button class="btn btn-default bg-primary-3" type="button">Volver al Inicio</button>

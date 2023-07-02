@@ -113,9 +113,22 @@ class QueryTypeSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class RentalOrderSerializer(serializers.ModelSerializer):
+    created_at = serializers.SerializerMethodField()
+    items = serializers.SerializerMethodField()
+
+    def get_created_at(self, obj):
+        # Obtener la fecha y hora en el formato deseado
+        created_at = obj.created_at.astimezone(timezone.get_current_timezone())
+        formatted_date = DateFormat(created_at).format("d-m-Y H:i")
+        return formatted_date
+    
     class Meta:
         model = RentalOrder
-        fields = '__all__'
+        fields = ('id', 'created_at', 'rut', 'name', 'address', 'phone', 'deliver_date', 'items')
+    
+    def get_items(self, rental_order):
+        rental_order_items = rental_order.rentalorderitem_set.all()
+        return RentalOrderItemSerializer(rental_order_items, many=True).data
 
 class RentalOrderItemSerializer(serializers.ModelSerializer):
     class Meta:

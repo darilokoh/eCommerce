@@ -46,8 +46,11 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from django.http import HttpRequest
 from rest_framework.views import APIView
 from django.utils import timezone
+from django.utils.timezone import make_aware
 from django.http import HttpRequest
 from rest_framework.views import APIView
+from dateutil.parser import parse
+from collections import Counter
 
 tok = None
 
@@ -1233,21 +1236,32 @@ def obtain_token(request):
 
 #LIST RENTAL ORDER A TRAVES DE CONSULTA API
 def list_rental_order(request):
-    response = requests.get(settings.API_BASE_URL + 'rental-orders/')
+    product_name = request.GET.get('product_name')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
 
+    response = requests.get(settings.API_BASE_URL + 'rental-orders/')
     if response.status_code != 200:
-        # Si la respuesta no es válida, devuelve un HttpResponse con un mensaje de error
         error_message = 'Error al obtener los datos de la API'
         return HttpResponse(error_message, status=500)
 
     rental_orders = response.json()
+
+    # Aplicar los filtros después de recibir los datos de la API
+    if product_name:
+        rental_orders = [ro for ro in rental_orders if any(product_name.lower() in item['product_name'].lower() for item in ro['items'])]
+
+    if start_date and end_date:
+        start_date = parse(start_date).date()
+        end_date = parse(end_date).date()
+        rental_orders = [ro for ro in rental_orders if start_date <= parse(ro['deliver_date']).date() <= end_date]
+
     paginator = Paginator(rental_orders, 5)
     page = request.GET.get('page', 1)
 
     try:
         rental_orders = paginator.page(page)
     except:
-        # Si no se puede paginar correctamente, devuelve un HttpResponse con un mensaje de error
         error_message = 'Error al paginar los datos'
         return HttpResponse(error_message, status=500)
 
@@ -1260,8 +1274,22 @@ def list_rental_order(request):
             total_price += product_price * amount
         rental_order['total_price'] = total_price
 
+    # Después de calcular el precio acumulado por cada RentalOrder
+    total_accumulated = sum(ro['total_price'] for ro in rental_orders)
+    total_products_sold = sum(item['amount'] for ro in rental_orders for item in ro['items'])
+    # Obtener una lista de todos los productos vendidos
+    all_products = [item['product_name'] for ro in rental_orders for item in ro['items']]
+
+    # Contar la cantidad de veces que se vende cada producto
+    product_counts = Counter(all_products)
+    # Obtener los productos más vendidos
+    top_products = product_counts.most_common(4)  # Obtener los 4 productos más vendidos
+
     data = {
         'entity': rental_orders,
-        'paginator': paginator
+        'paginator': paginator,
+        'total_accumulated': total_accumulated,
+        'total_products_sold': total_products_sold,
+        'top_products': top_products,
     }
     return render(request, "app/rental_order/list.html", data)

@@ -146,7 +146,7 @@ def home(request):
     return render(request, 'app/home.html', data)
 @csrf_exempt
 @api_view(['GET','POST'])
-@permission_classes((IsAuthenticated,))
+@login_required(login_url='login') 
 def catalogue(request):
     # Obtenemos los filtros desde el html
     name_filter = request.GET.get('name', '')

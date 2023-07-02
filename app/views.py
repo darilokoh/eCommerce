@@ -231,7 +231,7 @@ def rental_service(request):
                 'phone': form.cleaned_data['phone'],
                 'deliver_date': deliver_date_iso,  # Utilizar la cadena de texto en lugar del objeto datetime
             }
-
+            #validacion para verificar que el mismo rut no haya generado una solicitud de arriendo en los ultimos 15 minutos
             existing_order = RentalOrder.objects.filter(
                 Q(rut=rental_order_data['rut']) &
                 Q(created_at__gte=timezone.now() - timedelta(minutes=15))
@@ -251,12 +251,13 @@ def rental_service(request):
                         products_selected = request.POST.getlist('products')
                         print(request.POST)
                         quantities = [int(request.POST.get(f'quantity_{product_id}', 1)) for product_id in products_selected]
+                        print('cantidad',quantities)
 
                         rental_order_items = []
                         for product_id, quantity in zip(products_selected, quantities):
                             product = Product.objects.get(id=product_id)  # Obtener el producto de la base de datos
                             rental_order_item = RentalOrderItem(
-                                rental_order_id=rental_order_id,  # Asignar el ID de la orden de renta
+                                rental_order=RentalOrder.objects.get(id=rental_order_id),
                                 product_name=product.name,
                                 product_price=product.price,
                                 amount=quantity
@@ -266,9 +267,9 @@ def rental_service(request):
                         RentalOrderItem.objects.bulk_create(rental_order_items, batch_size=100)  # Especificar un tamaño de lote adecuado
 
                         # Agregar los productos a la orden a través de la API
-                        product_ids = [str(product_id) for product_id in products_selected]  # Convertir los IDs de productos a cadena de texto
-                        add_product_url = settings.API_BASE_URL + f'rental-orders/{rental_order["id"]}/add-product/?products={",".join(product_ids)}'
-                        requests.post(add_product_url)
+                        # product_ids = [str(product_id) for product_id in products_selected]  # Convertir los IDs de productos a cadena de texto
+                        # add_product_url = settings.API_BASE_URL + f'rental-orders/{rental_order["id"]}/add-product/?products={",".join(product_ids)}'
+                        # requests.post(add_product_url)
 
                         return JsonResponse({'message': 'La solicitud de arriendo ha sido enviada correctamente'})
                     else:

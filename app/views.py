@@ -228,10 +228,11 @@ def rental_service(request):
                 'rut': form.cleaned_data['rut'],
                 'name': form.cleaned_data['name'],
                 'address': form.cleaned_data['address'],
+                'email': form.cleaned_data['email'],
                 'phone': form.cleaned_data['phone'],
                 'deliver_date': deliver_date_iso,  # Utilizar la cadena de texto en lugar del objeto datetime
             }
-            #validacion para verificar que el mismo rut no haya generado una solicitud de arriendo en los ultimos 15 minutos
+            # validacion para verificar que el mismo rut no haya generado una solicitud de arriendo en los ultimos 15 minutos
             existing_order = RentalOrder.objects.filter(
                 Q(rut=rental_order_data['rut']) &
                 Q(created_at__gte=timezone.now() - timedelta(minutes=15))
@@ -249,9 +250,10 @@ def rental_service(request):
 
                         # Obtener la lista de productos seleccionados y sus cantidades
                         products_selected = request.POST.getlist('products')
-                        print(request.POST)
                         quantities = [int(request.POST.get(f'quantity_{product_id}', 1)) for product_id in products_selected]
-                        print('cantidad',quantities)
+
+                        # Obtener la lista completa de productos utilizando los ID de los productos seleccionados
+                        products = Product.objects.filter(id__in=products_selected)
 
                         rental_order_items = []
                         for product_id, quantity in zip(products_selected, quantities):
@@ -266,18 +268,37 @@ def rental_service(request):
 
                         RentalOrderItem.objects.bulk_create(rental_order_items, batch_size=100)  # Especificar un tamaño de lote adecuado
 
-                        # Agregar los productos a la orden a través de la API
-                        # product_ids = [str(product_id) for product_id in products_selected]  # Convertir los IDs de productos a cadena de texto
-                        # add_product_url = settings.API_BASE_URL + f'rental-orders/{rental_order["id"]}/add-product/?products={",".join(product_ids)}'
-                        # requests.post(add_product_url)
+                        # Obtener los nombres de los productos y calcular el precio total
+                        product_names = [product.name for product in products]
+                        total_price = sum(product.price * quantity for product, quantity in zip(products, quantities))
 
-                        return JsonResponse({'message': 'La solicitud de arriendo ha sido enviada correctamente'})
+                        # Enviar correo electrónico con la información del RentalOrder
+                        email_subject = 'Confirmación de orden de renta'
+                        email_body = f'Se ha creado una nueva orden de renta con los siguientes detalles:\n\n' \
+                                     f'RUT: {rental_order_data["rut"]}\n' \
+                                     f'Nombre: {rental_order_data["name"]}\n' \
+                                     f'Dirección: {rental_order_data["address"]}\n' \
+                                     f'Correo electrónico: {rental_order_data["email"]}\n' \
+                                     f'Teléfono: {rental_order_data["phone"]}\n' \
+                                     f'Fecha de entrega: {rental_order_data["deliver_date"]}\n\n' \
+                                     f'Productos:\n'
+                        for name, quantity, product in zip(product_names, quantities, products):
+                            email_body += f'- {name}: {quantity}\nprecio: {product.price}\n'
+                        email_body += f'Total de la orden: {total_price}\n\n' \
+                                      f'Gracias por su solicitud.'
+
+                        sender_email = settings.EMAIL_HOST_USER
+                        receiver_email = rental_order_data['email']
+
+                        send_mail(email_subject, email_body, sender_email, [receiver_email])
+
+                        return JsonResponse({'message': 'La solicitud de arriendo ha sido enviada correctamente, recibiras un correo con la información'})
                     else:
-                        return JsonResponse({'error': 'Error al enviar la solicitud view'})
+                        return JsonResponse({'error': 'Error al enviar la solicitud'})
 
                 except Exception as e:
                     print(f"Error en el servidor: {str(e)}")
-                    return JsonResponse({'error': 'Error en el servidor view'})
+                    return JsonResponse({'error': 'Error en el servidor'})
 
         else:
             return JsonResponse({'error': 'Error en los datos del formulario'})

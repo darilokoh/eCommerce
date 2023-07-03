@@ -101,6 +101,7 @@ class RentalOrder(models.Model):
     rut = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
     address = models.CharField(max_length=200)
+    email = models.EmailField(default= "default@correo.cl")
     phone = models.CharField(max_length=20)
     deliver_date = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)

@@ -978,6 +978,8 @@ def user_login(request):
 
 
 
+from django.contrib.auth.hashers import make_password
+
 def Recuperar(request):
     form = RecuperarForm(request.POST or None)
     if form.is_valid():
@@ -987,9 +989,16 @@ def Recuperar(request):
         except User.DoesNotExist:
             user = None
         if user:
+            # Generar una nueva contraseña temporal
+            new_password = User.objects.make_random_password()
+
+            # Establecer la nueva contraseña para el usuario
+            user.set_password(new_password)
+            user.save()
+
             # Enviar el correo electrónico con la contraseña
             subject = 'Recuperación de contraseña'
-            message = f'Tu contraseña es: {user.password}'
+            message = f'Tu nueva contraseña es: {new_password}'
             from_email = settings.EMAIL_HOST_USER
             recipient_list = [email]
             send_mail(subject, message, from_email, recipient_list, fail_silently=False)

@@ -171,7 +171,7 @@
                                 {% for product in top_products %}
                                 <tr>
                                     <td>{{ product.product_name }}</td>
-                                    <td>{{ calculate_total_sold(products) }}</td>
+                                    <td>{{ product.product_name }} - Cantidad vendida: {{ product.total_amount }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

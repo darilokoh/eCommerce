@@ -44,7 +44,13 @@
           productInput.setAttribute('type', 'hidden');
           productInput.setAttribute('name', 'products');
           productInput.setAttribute('value', productId);
+          const selectedQuantityInput = document.getElementById(`quantityInput${productId}`)
+          const quantityInput = document.createElement('input');
+          quantityInput.setAttribute('type', 'hidden');
+          quantityInput.setAttribute('name', `quantity_${productId}`);
+          quantityInput.setAttribute('value', selectedQuantityInput.value);
           form.appendChild(productInput);
+          form.appendChild(quantityInput);
         });
 
         // Enviar el formulario a través de AJAX

@@ -269,12 +269,6 @@ def rental_service(request):
 
                         RentalOrderItem.objects.bulk_create(rental_order_items, batch_size=100)  # Especificar un tamaño de lote adecuado
 
-                        # Descontar la cantidad de productos del stock
-                        for rental_order_item in rental_order_items:
-                            product_id = rental_order_item.product.id
-                            quantity = rental_order_item.amount
-                            Product.objects.filter(id=product_id).update(stock=F('stock') - quantity)
-
                         # Obtener los nombres de los productos y calcular el precio total
                         product_names = [product.name for product in products]
                         total_price = sum(product.price * quantity for product, quantity in zip(products, quantities))

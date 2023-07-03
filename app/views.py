@@ -215,7 +215,9 @@ def catalogue(request):
     }
 
     return render(request, 'app/catalogue.html', data)
-
+@csrf_exempt
+@api_view(['GET','POST'])
+@login_required(login_url='login') 
 def rental_service(request):
     if request.method == 'POST':
         form = RentalOrderForm(request.POST)
@@ -1253,9 +1255,7 @@ def obtain_token(request):
                 'refresh_token': str(refresh),
             })
     return Response({'error': 'Credenciales inválidas.'}, status=400)
-@csrf_exempt
-@api_view(['GET','POST'])
-@login_required(login_url='login') 
+
 def list_rental_order(request):
     product_name = request.GET.get('product_name')
     start_date = request.GET.get('start_date')

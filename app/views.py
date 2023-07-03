@@ -51,6 +51,7 @@ from django.http import HttpRequest
 from rest_framework.views import APIView
 from dateutil.parser import parse
 from collections import Counter
+from django.db.models import F
 
 tok = None
 

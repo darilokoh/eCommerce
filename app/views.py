@@ -1,18 +1,20 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import ContactForm, ProductForm, CustomUserCreationForm, CategoryForm, QueryTypeForm, RentalOrderForm, RecuperarForm
 from django.contrib import messages
+from datetime import timedelta, datetime
 from django.contrib.auth import authenticate, login
-from .models import Product, Category, Contact, QueryType, RentalOrder
+from .models import Product, Category, Contact, QueryType, RentalOrder, RentalOrderItem
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import Http404, HttpResponse, JsonResponse
 from rest_framework import viewsets, serializers
-from .serializers import ProductSerializer, CategorySerializer, ContactSerializer, QueryTypeSerializer, RentalOrderSerializer,LoginSerializer
+from .serializers import ProductSerializer, CategorySerializer, ContactSerializer, QueryTypeSerializer, RentalOrderSerializer, RentalOrderItemSerializer, LoginSerializer
 import requests
+from django.db import transaction
 from django.contrib.auth.decorators import login_required, permission_required
 from app.cart import Cart
 from rest_framework.response import Response
 from django.conf import settings
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q
 from django.views.decorators.csrf import csrf_exempt
 from .models import Order,OrderItem
 from django.core.mail import send_mail
@@ -43,9 +45,13 @@ from .models import Tokens
 from rest_framework.authtoken.views import ObtainAuthToken
 from django.http import HttpRequest
 from rest_framework.views import APIView
-
+from django.utils import timezone
+from django.utils.timezone import make_aware
 from django.http import HttpRequest
 from rest_framework.views import APIView
+from dateutil.parser import parse
+from collections import Counter
+from django.db.models import F
 
 tok = None
 
@@ -138,8 +144,17 @@ class QueryTypeViewset(viewsets.ModelViewSet):
     serializer_class = QueryTypeSerializer
 
 class RentalOrderViewSet(viewsets.ModelViewSet):
+    # def list(self, request):
+    #     rental_orders = RentalOrder.objects.all()
+    #     serializer = RentalOrderSerializer(rental_orders, many=True)
+    #     return Response(serializer.data)
     queryset = RentalOrder.objects.all()
     serializer_class = RentalOrderSerializer
+
+class RentalOrderItemViewSet(viewsets.ModelViewSet):
+    queryset = RentalOrderItem.objects.all()
+    serializer_class = RentalOrderItemSerializer
+ 
     
 #VISTAS INICIALES
 def home(request):
@@ -214,33 +229,80 @@ def rental_service(request):
                 'rut': form.cleaned_data['rut'],
                 'name': form.cleaned_data['name'],
                 'address': form.cleaned_data['address'],
+                'email': form.cleaned_data['email'],
                 'phone': form.cleaned_data['phone'],
                 'deliver_date': deliver_date_iso,  # Utilizar la cadena de texto en lugar del objeto datetime
             }
+            # validacion para verificar que el mismo rut no haya generado una solicitud de arriendo en los ultimos 15 minutos
+            existing_order = RentalOrder.objects.filter(
+                Q(rut=rental_order_data['rut']) &
+                Q(created_at__gte=timezone.now() - timedelta(minutes=15))
+            ).exists()
 
-            # Obtener la lista de productos seleccionados
-            products_selected = request.POST.getlist('products')
-            products_selected = [int(product_id) for product_id in products_selected if product_id.isdigit()]
+            if existing_order:
+                return JsonResponse({'error': 'Ya existe una orden de renta con los mismos datos'})
+            else:
+                try:
+                    # Crear la orden a través de la API
+                    rental_order_response = requests.post(settings.API_BASE_URL + 'rental-orders/', json=rental_order_data)
+                    if rental_order_response.status_code == 201:
+                        rental_order = rental_order_response.json()
+                        rental_order_id = rental_order['id']  # Obtener el ID de la orden de renta creada
 
-            rental_order_data['products'] = products_selected  # Agregar la lista de productos seleccionados
+                        # Obtener la lista de productos seleccionados y sus cantidades
+                        products_selected = request.POST.getlist('products')
+                        quantities = [int(request.POST.get(f'quantity_{product_id}', 1)) for product_id in products_selected]
 
-            try:
-                # Crear la orden a través de la API
-                rental_order_response = requests.post(settings.API_BASE_URL + 'rental-orders/', json=rental_order_data)
-                if rental_order_response.status_code == 201:
-                    rental_order = rental_order_response.json()
+                        # Obtener la lista completa de productos utilizando los ID de los productos seleccionados
+                        products = Product.objects.filter(id__in=products_selected)
 
-                    # Agregar los productos a la orden a través de la API
-                    product_ids = [str(product_id) for product_id in products_selected]  # Convertir los IDs de productos a cadena de texto
-                    add_product_url = settings.API_BASE_URL + f'rental-orders/{rental_order["id"]}/add-product/?products={",".join(product_ids)}'
-                    requests.post(add_product_url)
+                        rental_order_items = []
+                        for product_id, quantity in zip(products_selected, quantities):
+                            product = Product.objects.get(id=product_id)  # Obtener el producto de la base de datos
+                            rental_order_item = RentalOrderItem(
+                                rental_order=RentalOrder.objects.get(id=rental_order_id),
+                                product_name=product.name,
+                                product_price=product.price,
+                                amount=quantity
+                            )
+                            rental_order_items.append(rental_order_item)
 
-                    return JsonResponse({'message': 'La solicitud de arriendo ha sido enviado correctamente'})
-                else:
-                    return JsonResponse({'error': 'Error al enviar la solicitud'})
+                        RentalOrderItem.objects.bulk_create(rental_order_items, batch_size=100)  # Especificar un tamaño de lote adecuado
 
-            except Exception as e:
-                return JsonResponse({'error': 'Error en el servidor'})
+                        # Obtener los nombres de los productos y calcular el precio total
+                        product_names = [product.name for product in products]
+                        total_price = sum(product.price * quantity for product, quantity in zip(products, quantities))
+
+                        # Enviar correo electrónico con la información del RentalOrder
+                        email_subject = 'Confirmación de orden de renta'
+                        email_body = f'Se ha creado una nueva orden de renta con los siguientes detalles:\n\n' \
+                                     f'RUT: {rental_order_data["rut"]}\n' \
+                                     f'Nombre: {rental_order_data["name"]}\n' \
+                                     f'Dirección: {rental_order_data["address"]}\n' \
+                                     f'Correo electrónico: {rental_order_data["email"]}\n' \
+                                     f'Teléfono: {rental_order_data["phone"]}\n' \
+                                     f'Fecha de entrega: {rental_order_data["deliver_date"]}\n\n' \
+                                     f'Productos:\n'
+                        for name, quantity, product in zip(product_names, quantities, products):
+                            email_body += f'- {name}: {quantity}\nprecio: {product.price}\n'
+                        email_body += f'Total de la orden: {total_price}\n\n' \
+                                      f'Gracias por su solicitud.'
+
+                        sender_email = settings.EMAIL_HOST_USER
+                        receiver_email = rental_order_data['email']
+
+                        send_mail(email_subject, email_body, sender_email, [receiver_email])
+
+                        return JsonResponse({'message': 'La solicitud de arriendo ha sido enviada correctamente, recibiras un correo con la información'})
+                    else:
+                        return JsonResponse({'error': 'Error al enviar la solicitud'})
+
+                except Exception as e:
+                    print(f"Error en el servidor: {str(e)}")
+                    return JsonResponse({'error': 'Error en el servidor'})
+
+        else:
+            return JsonResponse({'error': 'Error en los datos del formulario'})
 
     else:
         form = RentalOrderForm()
@@ -1147,7 +1209,8 @@ def order_list(request):
     total_products_sold = OrderItem.objects.filter(order__in=orders).aggregate(total_sold=Sum('amount'))['total_sold']
 
     # Obtener los 4 productos más vendidos considerando los filtros
-    top_products = OrderItem.objects.filter(order__in=orders).values('product_name').annotate(total_amount=Count('product_name')).order_by('-total_amount')[:4]
+    # top_products = OrderItem.objects.filter(order__in=orders).values('product_name').annotate(total_amount=Count('product_name')).order_by('-total_amount')[:4]
+    top_products = OrderItem.objects.filter(order__in=orders).values('product_name').annotate(total_amount=Sum('amount')).order_by('-total_amount')[:4]
 
     paginator = Paginator(orders, 5)
     try:
@@ -1181,19 +1244,79 @@ def obtain_token(request):
             })
     return Response({'error': 'Credenciales inválidas.'}, status=400)
 
+#LIST RENTAL ORDER A TRAVES DE CONSULTA LOCAL
+# def list_rental_order(request):
+#     rental_orders = RentalOrder.objects.all()
+#     page = request.GET.get('page', 1)
+
+#     try:
+#         paginator = Paginator(rental_orders, 5)
+#         rental_orders = paginator.page(page)
+#     except:
+#         raise Http404
+
+#     data = {
+#         'entity': rental_orders,
+#         'paginator': paginator
+#     }
+#     return render(request, "app/rental_order/list.html", data)
+
+#LIST RENTAL ORDER A TRAVES DE CONSULTA API
 def list_rental_order(request):
+    product_name = request.GET.get('product_name')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
     response = requests.get(settings.API_BASE_URL + 'rental-orders/')
+    if response.status_code != 200:
+        error_message = 'Error al obtener los datos de la API'
+        return HttpResponse(error_message, status=500)
+
     rental_orders = response.json()
+
+    # Aplicar los filtros después de recibir los datos de la API
+    if product_name:
+        rental_orders = [ro for ro in rental_orders if any(product_name.lower() in item['product_name'].lower() for item in ro['items'])]
+
+    if start_date and end_date:
+        start_date = parse(start_date).date()
+        end_date = parse(end_date).date()
+        rental_orders = [ro for ro in rental_orders if start_date <= parse(ro['deliver_date']).date() <= end_date]
+
+    paginator = Paginator(rental_orders, 5)
     page = request.GET.get('page', 1)
 
     try:
-        paginator = Paginator(rental_orders, 5)
         rental_orders = paginator.page(page)
     except:
-        raise Http404
+        error_message = 'Error al paginar los datos'
+        return HttpResponse(error_message, status=500)
+
+    # Calcular el precio acumulado por cada RentalOrder
+    for rental_order in rental_orders:
+        total_price = 0
+        for item in rental_order['items']:
+            product_price = float(item['product_price'])
+            amount = item['amount']
+            total_price += product_price * amount
+        rental_order['total_price'] = total_price
+
+    # Después de calcular el precio acumulado por cada RentalOrder
+    total_accumulated = sum(ro['total_price'] for ro in rental_orders)
+    total_products_sold = sum(item['amount'] for ro in rental_orders for item in ro['items'])
+    # Obtener una lista de todos los productos vendidos
+    all_products = [item['product_name'] for ro in rental_orders for item in ro['items']]
+
+    # Contar la cantidad de veces que se vende cada producto
+    product_counts = Counter(all_products)
+    # Obtener los productos más vendidos
+    top_products = product_counts.most_common(4)  # Obtener los 4 productos más vendidos
 
     data = {
         'entity': rental_orders,
-        'paginator': paginator
+        'paginator': paginator,
+        'total_accumulated': total_accumulated,
+        'total_products_sold': total_products_sold,
+        'top_products': top_products,
     }
     return render(request, "app/rental_order/list.html", data)

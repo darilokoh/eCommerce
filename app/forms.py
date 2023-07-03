@@ -157,6 +157,7 @@ class RentalOrderForm(forms.ModelForm):
             'rut': 'Rut',
             'name': 'Nombre',
             'address': 'Direccion',
+            'email': 'Correo',
             'phone': 'Celular',
             'deliver_date': 'Fecha de entrega'
         }

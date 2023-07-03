@@ -1244,24 +1244,6 @@ def obtain_token(request):
             })
     return Response({'error': 'Credenciales inválidas.'}, status=400)
 
-#LIST RENTAL ORDER A TRAVES DE CONSULTA LOCAL
-# def list_rental_order(request):
-#     rental_orders = RentalOrder.objects.all()
-#     page = request.GET.get('page', 1)
-
-#     try:
-#         paginator = Paginator(rental_orders, 5)
-#         rental_orders = paginator.page(page)
-#     except:
-#         raise Http404
-
-#     data = {
-#         'entity': rental_orders,
-#         'paginator': paginator
-#     }
-#     return render(request, "app/rental_order/list.html", data)
-
-#LIST RENTAL ORDER A TRAVES DE CONSULTA API
 def list_rental_order(request):
     product_name = request.GET.get('product_name')
     start_date = request.GET.get('start_date')
@@ -1283,16 +1265,19 @@ def list_rental_order(request):
         end_date = parse(end_date).date()
         rental_orders = [ro for ro in rental_orders if start_date <= parse(ro['deliver_date']).date() <= end_date]
 
-    paginator = Paginator(rental_orders, 5)
-    page = request.GET.get('page', 1)
+    # Calcular el precio acumulado y la cantidad de productos vendidos
+    total_accumulated = sum(
+        float(item['product_price']) * item['amount']
+        for ro in rental_orders
+        for item in ro['items']
+    )
+    total_products_sold = sum(
+        item['amount']
+        for ro in rental_orders
+        for item in ro['items']
+    )
 
-    try:
-        rental_orders = paginator.page(page)
-    except:
-        error_message = 'Error al paginar los datos'
-        return HttpResponse(error_message, status=500)
-
-    # Calcular el precio acumulado por cada RentalOrder
+    # Calcular el campo total_price para cada rental_order
     for rental_order in rental_orders:
         total_price = 0
         for item in rental_order['items']:
@@ -1301,16 +1286,36 @@ def list_rental_order(request):
             total_price += product_price * amount
         rental_order['total_price'] = total_price
 
-    # Después de calcular el precio acumulado por cada RentalOrder
-    total_accumulated = sum(ro['total_price'] for ro in rental_orders)
-    total_products_sold = sum(item['amount'] for ro in rental_orders for item in ro['items'])
     # Obtener una lista de todos los productos vendidos
-    all_products = [item['product_name'] for ro in rental_orders for item in ro['items']]
+    all_products = [
+        item['product_name']
+        for ro in rental_orders
+        for item in ro['items']
+    ]
 
     # Contar la cantidad de veces que se vende cada producto
     product_counts = Counter(all_products)
+
     # Obtener los productos más vendidos
-    top_products = product_counts.most_common(4)  # Obtener los 4 productos más vendidos
+    top_products = []
+    for product, _ in product_counts.most_common(4):
+        total_amount = sum(
+            item['amount']
+            for ro in rental_orders
+            for item in ro['items']
+            if item['product_name'] == product
+        )
+        top_products.append((product, total_amount))
+
+    # Crear un Paginator con los datos sin paginar
+    paginator = Paginator(rental_orders, 5)
+    page = request.GET.get('page', 1)
+
+    try:
+        rental_orders = paginator.page(page)
+    except:
+        error_message = 'Error al paginar los datos'
+        return HttpResponse(error_message, status=500)
 
     data = {
         'entity': rental_orders,

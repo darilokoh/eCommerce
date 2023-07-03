@@ -3,6 +3,7 @@ from rest_framework import serializers
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.utils.dateformat import DateFormat
+from django.conf import settings
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -86,9 +87,9 @@ class ContactSerializer(serializers.ModelSerializer):
             Teléfono: {phone}
             Mensaje: {message}
         '''
-        from_email = 'erreapectm@gmail.com'  # Tu dirección de correo electrónico
+        from_email = settings.EMAIL_HOST_USER  # Tu dirección de correo electrónico
         # La dirección de correo electrónico del destinatario
-        to_email = 'dario.vera96@gmail.com'
+        to_email = 'da.vera@duocuc.cl'
         send_mail(subject, email_message, from_email, [to_email])
 
         return contact
@@ -129,7 +130,7 @@ class RentalOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RentalOrder
-        fields = ('id', 'created_at', 'rut', 'name', 'address', 'phone', 'deliver_date', 'items')
+        fields = ('id', 'created_at', 'rut', 'name', 'address', 'email', 'phone', 'deliver_date', 'items')
     
 class RentalOrderItemSerializer(serializers.ModelSerializer):
     class Meta:

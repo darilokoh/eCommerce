@@ -80,6 +80,7 @@
 {% load humanize %}
 <div class="container my-5">
   <section class="pb-5">
+    <br><br>
     <h1 class="text-center py-5">ARRIENDA UN BARRIL CERVECERO!</h1>
     <div class="row justify-content-center">
       {% for p in products %}
@@ -107,7 +108,8 @@
               <br>
               <div class="form-group">
                 <label for="quantityInput{{ p.id }}">Cantidad:</label>
-                <input type="number" class="form-control" id="quantityInput{{ p.id }}" name="quantity_{{ p.id }}" value="1" min="1">
+                <input type="number" class="form-control quantity-input" id="quantityInput{{ p.id }}" name="quantity_{{ p.id }}" value="1" min="1"
+                       data-product-id="{{ p.id }}">
               </div>
             </div>
           </div>
@@ -163,6 +165,10 @@
                 <label for="direccionInput" class="form-label">Dirección</label>
                 <input type="text" class="form-control" id="direccionInput" name="address"
                   placeholder="Ingrese su dirección">
+              </div>
+              <div class="mb-3">
+                <label for="emailInput" class="form-label">Correo Electrónico</label>
+                <input type="email" class="form-control" id="emailInput" name="email" placeholder="Ingrese su correo electrónico">
               </div>
               <div class="mb-3">
                 <label for="celularInput" class="form-label">Celular</label>

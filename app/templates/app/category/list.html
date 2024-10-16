@@ -33,23 +33,20 @@
     <br><br>
     <div class="card">
         <div class="card-body">
-            <center>
-                <h2>Lista de Categorias</h2>
-            </center>
+            <h2 style="text-align: center;">Lista de Categorías</h2>
             <hr>
             <div class="table-responsive">
                 <table id="productTable" class="table table-striped table-hover table-responsive-sm">
                     <thead>
                         <tr>
-                            <th>Nombre</th>
-                            <th>Descripcion</th>
-                            <th>Imagen</th>
+                            <th scope="col">Nombre</th>
+                            <th scope="col">Descripción</th>
+                            <th scope="col">Imagen</th>
                             {% if perms.app.change_category %}
-                            <th>Modificar</th>
+                            <th scope="col">Modificar</th>
                             {% endif %}
-
                             {% if perms.app.delete_category %}
-                            <th>Eliminar</th>
+                            <th scope="col">Eliminar</th>
                             {% endif %}
                         </tr>
                     </thead>
@@ -63,7 +60,7 @@
                         <td>{{c.description }}</td>
                         <td>
                             {% if c.image %}
-                                <img src="{{ c.image }}" alt="Imagen de la categoria" style="max-width: 50px; max-height: 50px;">
+                                <img src="{{ c.image }}" alt="{{ c.name }}" style="max-width: 50px; max-height: 50px;">
                             {% else %}
                                 Sin imagen
                             {% endif %}
@@ -71,13 +68,13 @@
 
                         {% if perms.app.change_category %}
                         <td>
-                            <a href="{% url 'update_category' c.id %}" class="btn btn-default bg-primary-3">Modificar</a>
+                            <button class="btn btn-default bg-primary-3" type="button" onclick="window.location.href='{% url 'update_category' c.id %}'">Modificar</button>
                         </td>
                         {% endif %}
 
                         {% if perms.app.delete_category %}
                         <td>
-                            <a href="#" onclick="delete_Category({{ c.id }})" class="btn btn-default bg-primary-3 delete-btn">Eliminar</a>
+                            <button class="btn btn-default bg-primary-3 delete-btn" type="button" onclick="delete_Category({{ c.id }})">Eliminar</button>
                         </td>
                         {% endif %}
                     </tr>
@@ -95,9 +92,7 @@
             <div class="row list-buttons">
 
                 <div class="col">
-                    <a href="{% url 'home' %}">
-                        <button class="btn btn-default bg-primary-3 add-to-cart-btn" type="button">Volver al Inicio</button>
-                    </a>
+                    <button class="btn btn-default bg-primary-3 add-to-cart-btn" type="button" onclick="window.location.href='{% url 'home' %}'">Volver al Inicio</button>
                 </div>
 
                 <div class="col">
@@ -110,9 +105,7 @@
 
                 {% if perms.app.add_category %}
                 <div class="col">
-                    <a href="{% url 'add_category' %}">
-                        <button class="btn btn-default bg-primary-3" type="button">Agregar Nuevo</button>
-                    </a>
+                    <button class="btn btn-default bg-primary-3" type="button" onclick="window.location.href='{% url 'add_category' %}'">Agregar Nuevo</button>
                 </div>
                 {% endif %}
 

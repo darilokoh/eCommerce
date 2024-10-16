@@ -1079,6 +1079,13 @@ def user_login(request):
                 return redirect(to="home")           
     return render(request, "registration/login.html", datos)
 
+from django.core.mail import send_mail
+from django.utils.crypto import get_random_string
+from django.contrib.auth.models import User
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.conf import settings
+
 def Recuperar(request):
     form = RecuperarForm(request.POST or None)
     if form.is_valid():
@@ -1088,14 +1095,29 @@ def Recuperar(request):
         except User.DoesNotExist:
             user = None
         if user:
-            # Enviar el correo electrónico con la contraseña
+            # Generar una nueva contraseña temporal
+            new_password = get_random_string(length=12)
+            
+            # Actualizar la contraseña del usuario
+            user.set_password(new_password)
+            user.save()
+
+            # Enviar la nueva contraseña por correo
             subject = 'Recuperación de contraseña'
-            message = f'Tu contraseña es: {user.password}'
+            message = f'Tu nueva contraseña temporal es: {new_password}. Por favor, cámbiala inmediatamente después de iniciar sesión.'
             from_email = settings.EMAIL_HOST_USER
             recipient_list = [email]
             send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-            messages.success(request, "Se ha enviado un correo con tu contraseña")
+            
+            # Mostrar mensaje de éxito
+            messages.success(request, "Se ha enviado una nueva contraseña temporal a tu correo.")
+            return redirect('login')  # Redirige al formulario de login después de enviar el correo
+
+        else:
+            messages.error(request, 'No se encontró una cuenta con ese correo electrónico.')
+
     return render(request, 'registration/Recuperar.html', {'form': form})
+
 #se crea usuario nuevo y token
 
 class LoginView(APIView):

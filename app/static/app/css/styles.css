@@ -255,15 +255,16 @@ footer {
 }
 
 .cart-container {
-  display: none;
   position: fixed;
   top: 0;
-  right: 0;
+  right: -430px; /* Posiciona el carrito fuera de la pantalla a la derecha */
   width: 430px; /* Ancho del carrito */
-  height: 100%; /* Altura del carrito (puede ajustarse según sea necesario) */
+  height: 100%; /* Altura del carrito */
   background-color: white; /* Color de fondo del carrito */
-  z-index: 9999; /* Asegura que el carrito se muestre por encima de otros elementos */
-  padding: 10px; /* Agrega un espacio interno al carrito */
+  z-index: 9999; /* Asegura que el carrito esté por encima de otros elementos */
+  padding: 10px; /* Espacio interno */
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5); /* Sombra para dar un efecto de elevación */
+  transition: right 0.3s ease-in-out; /* Transición suave para el deslizamiento */
 }
 
 .cart-close-button {
@@ -281,4 +282,12 @@ footer {
 
 .card-terms{
   height: 534px;
+}
+
+.cart-container.show {
+  right: 0; /* Muestra el carrito deslizándose hacia la izquierda */
+}
+
+.cart-container.hide {
+  right: -430px; /* Oculta el carrito deslizándose hacia la derecha */
 }

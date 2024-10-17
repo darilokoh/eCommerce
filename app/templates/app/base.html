@@ -74,7 +74,9 @@
             </div>
 
             <div class="nav-item username">
-              <a class="nav-link" href="#">@{{ user.username }}</a>
+              <a class="nav-link user-link" href="#">
+                  <i class="fas fa-user"></i> {{ user.username }}
+              </a>
             </div>
             {% else %}
             <div class="nav-item login">
@@ -83,7 +85,7 @@
           </div>
           {% endif %}
           <button id="cart-toggle" class="btn btn-primary">
-            Ver Carrito <i class="fas fa-shopping-cart" id="cart-toggle"></i> 
+            Ver Carrito <i class="fas fa-shopping-cart"></i>
           </button>
         </div>
   </div>

@@ -1,13 +1,9 @@
 {% extends 'app/base.html' %}
 
 {% load static %}
+{% block title %}Conejo Furioso{% endblock %}
 {% block css %}
-<title>Conejo Furioso</title>
-{% endblock %}
 
-{% block js %}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="{% static 'app/js/product_detail.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -211,4 +207,9 @@
     </div>
   </section>
 </div>
+{% endblock %}
+
+{% block js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'app/js/product_detail.js' %}"></script>
 {% endblock %}

@@ -1,8 +1,8 @@
 {% extends 'app/base.html' %}
 {% load static %}
+{% block title %}Contacto | Conejo Furioso{% endblock %}
 {% load crispy_forms_tags %}
-{% block tittle_css %}
-<title>Catalogo | Conejo Furioso</title>
+{% block css %}
 {% endblock %}
 
 {% block content %}
@@ -36,7 +36,9 @@
                             {% endif %}
                         </div>
                     {% endfor %}
-                    <center><button type="submit" class="btn btn-default bg-primary-3 mt-3">Enviar</button></center>
+                    <div style="text-align: center;">
+                        <button type="submit" class="btn btn-default bg-primary-3 mt-3">Enviar</button>
+                    </div>                    
                 </form>
                 {{ message }}
             </blockquote>

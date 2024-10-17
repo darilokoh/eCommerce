@@ -29,21 +29,19 @@
     <br><br>
     <div class="card">
         <div class="card-body">
-            <center>
-                <h2>Lista de Productos</h2>
-            </center>
+            <h2 style="text-align: center;">Lista de Productos</h2>
             <hr>
 
             <div class="mb-3">
                 <form method="get" action="{% url 'list_product' %}" id="filterForm">
                     <div class="row">
                         <div class="col-md-3">
-                            <label class="form-label">Filtrar por nombre:</label>
-                            <input type="text" class="form-control" placeholder="Ingrese el nombre" name="name" value="{{ name_filter }}">
+                            <label class="form-label" for="name-filter">Filtrar por nombre:</label>
+                            <input type="text" class="form-control" id="name-filter" placeholder="Ingrese el nombre" name="name" value="{{ name_filter }}">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Filtrar por categoría:</label>
-                            <select class="form-select" name="category">
+                            <label class="form-label" for="category-filter">Filtrar por categoría:</label>
+                            <select class="form-select" id="category-filter" name="category">
                                 <option value="">Todas las categorías</option>
                                 {% for category in categories %}
                                 <option value="{{ category.id }}" {% if category.id == category_filter %}selected{% endif %}>{{ category.name }}</option>
@@ -64,24 +62,23 @@
                 <table id="productTable" class="table table-striped table-hover table-responsive-sm">
                     <thead>
                         <tr>
-                            <th>Nombre</th>
-                            <th>Descripción</th>
-                            <th>Valor</th>
-                            <th>Categoría</th>
-                            <th>Nuevo</th>
-                            <th>Unidades</th>
-                            <th>Destacado</th>
-                            <th>Creación</th>
-                            <th>Imagen</th>
-                            <th>Arrendable</th>
+                            <th scope="col">Nombre</th>
+                            <th scope="col">Descripción</th>
+                            <th scope="col">Valor</th>
+                            <th scope="col">Categoría</th>
+                            <th scope="col">Nuevo</th>
+                            <th scope="col">Unidades</th>
+                            <th scope="col">Destacado</th>
+                            <th scope="col">Creación</th>
+                            <th scope="col">Imagen</th>
+                            <th scope="col">Arrendable</th>
                             {% if perms.app.change_product %}
-                            <th>Modificar</th>
+                            <th scope="col">Modificar</th>
                             {% endif %}
-
                             {% if perms.app.delete_product %}
-                            <th>Eliminar</th>
+                            <th scope="col">Eliminar</th>
                             {% endif %}
-                        </tr>
+                        </tr>                        
                     </thead>
                     <tbody>
                     </tbody>
@@ -125,14 +122,14 @@
 
                         {% if perms.app.change_product %}
                         <td>
-                            <a href="{% url 'update_product' p.id %}" class="btn btn-default bg-primary-3">Modificar</a>
+                            <button class="btn btn-default bg-primary-3" type="button" onclick="window.location.href='{% url 'update_product' p.id %}'">Modificar</button>
                         </td>
                         {% endif %}
 
                         {% if perms.app.delete_product %}
                         <td>
-                            <a href="#" onclick="deleteProduct({{ p.id }})" class="btn btn-default bg-primary-3 delete-btn">Eliminar</a>
-                        </td>
+                            <button class="btn btn-default bg-primary-3 delete-btn" type="button" onclick="deleteProduct({{ p.id }})">Eliminar</button>
+                        </td>                        
                         {% endif %}
                     </tr>
 
@@ -148,17 +145,13 @@
             <br>
             <div class="row list-buttons">
                 <div class="col">
-                    <a href="{% url 'home' %}">
-                        <button class="btn btn-default bg-primary-3 add-to-cart-btn" type="button">Volver al Inicio</button>
-                    </a>
+                    <button class="btn btn-default bg-primary-3 add-to-cart-btn" type="button" onclick="window.location.href='{% url 'home' %}'">Volver al Inicio</button>
                 </div>
                 <div class="col"></div>
                 <div class="col"></div>
                 {% if perms.app.add_product %}
                 <div class="col">
-                    <a href="{% url 'add_product' %}">
-                        <button class="btn btn-default bg-primary-3" type="button">Agregar Nuevo</button>
-                    </a>
+                    <button class="btn btn-default bg-primary-3" type="button" onclick="window.location.href='{% url 'add_product' %}'">Agregar Nuevo</button>
                 </div>
                 {% endif %}
             </div>

@@ -55,11 +55,9 @@ window.addEventListener("scroll", () => {
   }
 });
 
-// Agregar controlador de eventos de clic al documento
 document.addEventListener("click", (event) => {
   const target = event.target;
 
-  // Verificar si se hizo clic fuera del carrito
   if (
     isCartVisible &&
     target !== cartToggle &&
@@ -72,10 +70,12 @@ document.addEventListener("click", (event) => {
 
 function toggleCartVisibility() {
   if (!isCartVisible) {
-    cartContainer.style.display = "block";
+    cartContainer.classList.remove('hide');
+    cartContainer.classList.add('show');
     isCartVisible = true;
   } else {
-    cartContainer.style.display = "none";
+    cartContainer.classList.remove('show');
+    cartContainer.classList.add('hide');
     isCartVisible = false;
   }
 }

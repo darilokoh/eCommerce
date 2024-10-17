@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   {% load static %}
   {% load auth_extras %}
+  <title>{% block title %}Conejo Furioso{% endblock %}</title>
   {% block css %}
   {% endblock %}
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -53,8 +54,9 @@
 
             {% if request.user|has_group:"admin" %}
                 <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown"
-                        aria-expanded="false">ADMINISTRACIÓN</a>
+                  <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown"
+                    aria-expanded="false" tabindex="0"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { this.click(); }">ADMINISTRACIÓN</a>
                     <ul class="dropdown-menu" aria-labelledby="adminDropdown">
                         <li><a class="dropdown-item" href="{% url 'list_product' %}">Productos</a></li>
                         <li><a class="dropdown-item" href="{% url 'list_category' %}">Categorías</a></li>
@@ -100,10 +102,10 @@
                 <br>
             </tr>
             <tr>
-              <th>Nombre</th>
-              <th>Precio</th>
-              <th>Cantidad</th>
-              <th>Total</th>
+              <th scope="col">Nombre</th>
+              <th scope="col">Precio</th>
+              <th scope="col">Cantidad</th>
+              <th scope="col">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -127,8 +129,8 @@
             </tr>
             {% endif %}
             <tr>
-              <th colspan="3" class="text-right">Total Compra:</th>
-              <th>$ {{cart_total}}</th>
+              <th colspan="3" class="text-right" scope="col">Total Compra:</th>
+              <th scope="col">$ {{cart_total}}</th>
             </tr>
           </tbody>
 
@@ -189,10 +191,6 @@
       cancelButtonText: "No"
     }).then((result) => {
       if (result.isConfirmed) {
-        // Lógica para eliminar el producto
-        // Puedes realizar una petición AJAX o redirigir a una URL específica
-      } else {
-        // Lógica si el usuario cancela la eliminación
       }
     });
   </script>

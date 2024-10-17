@@ -1,7 +1,8 @@
 {% extends 'app/base.html' %}
 {% load static %}
+{% block title %}Catalogo | Conejo Furioso{% endblock %}
 {% block tittle_css %}
-<title>Catalogo | Conejo Furioso</title>
+
 {% endblock %}
 
 {% block content %}
@@ -15,11 +16,11 @@
           <h5 class="card-title">Filtros</h5>
           <form>
             <div class="mb-3">
-              <label class="form-label">Buscar por nombre</label>
-              <input type="text" class="form-control" placeholder="Ingrese el nombre" name="name">
+              <label for="name-filter" class="form-label">Buscar por nombre</label>
+              <input type="text" class="form-control" placeholder="Ingrese el nombre" name="name" id="name-filter">
             </div>
             <div class="mb-3">
-              <label class="form-label">Filtrar por categoría</label>
+              <label for="category-filter" class="form-label">Filtrar por categoría</label>
               <select class="form-select" id="category-filter" name="category">
                 <option value="">Todas las categorías</option>
                 {% for category in categories %}
@@ -28,12 +29,12 @@
               </select>
             </div>
             <div class="mb-3">
-              <label class="form-label">Precio mínimo</label>
-              <input type="number" class="form-control" placeholder="Ingrese el precio mínimo" name="min_price_filter">
+              <label for="min-price-filter" class="form-label">Precio mínimo</label>
+              <input type="number" class="form-control" placeholder="Ingrese el precio mínimo" name="min_price_filter" id="min-price-filter">
             </div>
             <div class="mb-3">
-              <label class="form-label">Precio máximo</label>
-              <input type="number" class="form-control" placeholder="Ingrese el precio máximo" name="max_price_filter">
+              <label for="max-price-filter" class="form-label">Precio máximo</label>
+              <input type="number" class="form-control" placeholder="Ingrese el precio máximo" name="max_price_filter" id="max-price-filter">
             </div>
             <button type="submit" class="btn btn-default bg-primary-3" name="filter_submit">Aplicar filtros</button>
             {% if request.GET.name or request.GET.category or request.GET.min_price_filter or request.GET.max_price_filter %}

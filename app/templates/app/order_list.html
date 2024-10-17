@@ -10,9 +10,7 @@
     <br><br>
     <div class="card">
         <div class="card-body">
-            <center>
-                <h2>Lista de Ordenes</h2>
-            </center>
+            <h2 style="text-align: center;">Lista de Ordenes</h2>
             <hr>
             <div class="table-responsive">
                 <!-- Formulario de filtros -->
@@ -40,19 +38,23 @@
                             </div>
                         </div>
                         <div class="col-md-1">
-                            <div class="form-group">
-                                <label>&nbsp;</label>
+                            <div class="form-group mt-4">
                                 <button class="btn btn-default bg-primary-3 form-control" type="submit">Filtrar</button>
                             </div>
                         </div>
                         <div class="col-md-2">
+<<<<<<< HEAD
                             <div class="form-group">
                                 <label>&nbsp;</label>
                                 <a href="{% url 'order_list' %}"
                                     class="btn btn-default bg-primary-3 add-to-cart-btn form-control">Limpiar
                                     filtros</a>
+=======
+                            <div class="form-group mt-4">
+                                <a href="{% url 'order_list' %}" class="btn btn-default bg-primary-3 add-to-cart-btn form-control">Limpiar filtros</a>
+>>>>>>> origin/dev
                             </div>
-                        </div>
+                        </div>                        
                     </div>
                 </form>
                 <!-- Fin del formulario de filtros -->
@@ -60,15 +62,15 @@
                 <table id="productTable" class="table table-striped table-hover table-responsive-sm">
                     <thead>
                         <tr>
-                            <th>Usuario</th>
-                            <th>Numero de orden</th>
-                            <th>Nombre</th>
-                            <th>Direccion</th>
-                            <th>Celular</th>
-                            <th>Acumulado</th>
-                            <th>Pagado</th>
-                            <th>Fecha</th>
-                            <th>Order Items</th>
+                            <th scope="col">Usuario</th>
+                            <th scope="col">Numero de orden</th>
+                            <th scope="col">Nombre</th>
+                            <th scope="col">Direccion</th>
+                            <th scope="col">Celular</th>
+                            <th scope="col">Total Orden</th>
+                            <th scope="col">Pagado</th>
+                            <th scope="col">Fecha</th>
+                            <th scope="col">Order Items</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -141,6 +143,7 @@
                         background-color: #f2f2f2;
                     }
                 </style>
+<<<<<<< HEAD
                 
                 </head>
                 
@@ -191,6 +194,53 @@
                             </a>
                         </div>
                     </div>
+=======
+
+                <div class="total-accumulated">
+                    <table>
+                        <tr>
+                            <th scope="col">Total acumulado de todas las órdenes</th>
+                            <td>$ {{ total_accumulated }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="col">Total de productos vendidos</th>
+                            <td>{{ total_products_sold }}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="top-products">
+                    <h3>Productos más vendidos:</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">Nombre del producto</th>
+                                <th scope="col">Cantidad vendida</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in top_products %}
+                            <tr>
+                                <td>{{ product.product_name }}</td>
+                                <td>{{ product.product_name }} - Cantidad vendida: {{ product.total_amount }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <hr>
+                    <div>
+                        {% include 'app/paginator.html' %}
+                    </div>
+                </div>
+
+                <br>
+                <div class="row list-buttons">
+                    <div class="col">
+                        <button class="btn btn-default bg-primary-3" type="button" onclick="window.location.href='{% url 'home' %}'">Volver al Inicio</button>
+                    </div>
+                </div>
+>>>>>>> origin/dev
             </div>
         </div>
 
@@ -198,4 +248,8 @@
 
     <script src="{% static 'core/js/jquery-3.6.0.js'%}"></script>
 
+<<<<<<< HEAD
     {% endblock %}
+=======
+{% endblock %}
+>>>>>>> origin/dev

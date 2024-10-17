@@ -15,14 +15,22 @@
 
   <link rel="stylesheet" href="{% static 'app/css/styles.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-
+  <style>
+    body {
+        background-image: url("{% static 'app/img/background.png' %}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed; /* Para que el fondo sea fijo al hacer scroll */
+        background-repeat: no-repeat;
+    }
+</style>
 </head>
 
 
 <body>
   <div class="header">
     <header>
-      <nav class="navbar navbar-expand-lg fixed-top bg-primary">
+      <nav class="navbar navbar-expand-lg fixed-top bg-primary nav-gradient">
         <div class="container">
           <a class="navbar-brand" href="{% url 'home' %}">
             <img src="{% static 'app/img/logo.png' %}" alt="Bootstrap" width="75" height="60">

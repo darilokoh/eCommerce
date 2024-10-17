@@ -52,6 +52,7 @@ from rest_framework.views import APIView
 from dateutil.parser import parse
 from collections import Counter
 from django.db.models import F
+from django.contrib.auth.hashers import make_password
 
 
 # IMPORTS LOGICA TABLA ORDER ITEM
@@ -182,9 +183,8 @@ def home(request):
     
     return render(request, 'app/home.html', data)
 
-@csrf_exempt
-@api_view(['GET','POST'])
-# @permission_classes((IsAuthenticated,))
+
+
 def catalogue(request):
     # Obtenemos los filtros desde el html
     name_filter = request.GET.get('name', '')
@@ -220,7 +220,9 @@ def catalogue(request):
     }
 
     return render(request, 'app/catalogue.html', data)
-
+@csrf_exempt
+@api_view(['GET','POST'])
+@login_required(login_url='login') 
 def rental_service(request):
     if request.method == 'POST':
         form = RentalOrderForm(request.POST)
@@ -1084,6 +1086,9 @@ def user_login(request):
                 return redirect(to="home")           
     return render(request, "registration/login.html", datos)
 
+
+
+
 def Recuperar(request):
     form = RecuperarForm(request.POST or None)
     if form.is_valid():
@@ -1093,9 +1098,16 @@ def Recuperar(request):
         except User.DoesNotExist:
             user = None
         if user:
+            # Generar una nueva contraseña temporal
+            new_password = User.objects.make_random_password()
+
+            # Establecer la nueva contraseña para el usuario
+            user.set_password(new_password)
+            user.save()
+
             # Enviar el correo electrónico con la contraseña
             subject = 'Recuperación de contraseña'
-            message = f'Tu contraseña es: {user.password}'
+            message = f'Tu nueva contraseña es: {new_password}'
             from_email = settings.EMAIL_HOST_USER
             recipient_list = [email]
             send_mail(subject, message, from_email, recipient_list, fail_silently=False)

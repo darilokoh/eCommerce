@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import ContactForm, ProductForm, CustomUserCreationForm, CategoryForm, QueryTypeForm, RentalOrderForm, RecuperarForm
+from .forms import CambiarPasswordForm, ContactForm, ProductForm, CustomUserCreationForm, CategoryForm, QueryTypeForm, RentalOrderForm, RecuperarForm
 from django.contrib import messages
 from datetime import timedelta, datetime
 from django.contrib.auth import authenticate, login
@@ -109,7 +109,27 @@ class ProductViewset(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         serializer.save()
+    from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+
+
+@login_required
+def CambiarPassword(request):
+    if request.method == 'POST':
+        form = CambiarPasswordForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            form.save()
+           
+            messages.success(request, 'Tu contraseña ha sido actualizada exitosamente.')
+            return redirect('home')  # Redirige a la página de inicio o donde prefieras
+        else:
+            messages.error(request, 'Por favor corrige los errores a continuación.')
+    else:
+        form = CambiarPasswordForm(user=request.user)
     
+    return render(request, 'registration/CambiarPassword.html', {'form': form})
+
+
 class ContactViewSet(viewsets.ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
@@ -808,32 +828,7 @@ def product_detail(request, id):
         return render(request, 'app/product/detail.html', {'error_message': error_message})
 
 #VISTA DE REGISTRO NO API
-def register(request):
-    data = {
-        'form': UsuariosForm()
-    }
-    if request.method == 'POST':
-        form = UsuariosForm(request.POST)
-        if form.is_valid():
-            form.save()
-            #obtiene los datos del usuario desde formulario
-            usernameN = form.cleaned_data.get('usrN')
-            passwordN = form.cleaned_data.get('pswrdN')
-            passwordN2= form.cleaned_data.get('pswrdN2')
-            try:
-                #se verifica existencia del usuario
-                user = User.objects.get(username = usernameN)
-            except User.DoesNotExist:
-                #si no existe se genera un nuevo usuario validando si es que las pswrd son identicas
-                if(passwordN == passwordN2):
-                    user = User.objects.create_user(username=usernameN,email=usernameN,password=passwordN)
-                    user = authenticate(username=usernameN, password=passwordN) #autentifican las credenciales del usuario
-                    #se logea al usuario nuevo
-                    login(request,user)
-            messages.success(request, "Te has registrado correctamente")
-            return redirect(to="home")
-        data["form"] = form
-    return render(request, 'registration/register.html', data)
+
 
 #METODOS DEL CARRITO NO API
 def add_prod_cart(request, product_id):
@@ -1082,9 +1077,7 @@ def user_login(request):
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.contrib.auth.models import User
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.conf import settings
+
 
 def Recuperar(request):
     form = RecuperarForm(request.POST or None)

@@ -16,6 +16,22 @@ from django.forms import ModelForm
 from .models import  Usuarios
 from allauth.account.forms import LoginForm
 
+from django.contrib.auth.forms import PasswordChangeForm
+
+class CambiarPasswordForm(PasswordChangeForm):
+    old_password = forms.CharField(
+        label="Contraseña actual",
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Contraseña actual'})
+    )
+    new_password1 = forms.CharField(
+        label="Nueva contraseña",
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Nueva contraseña'})
+    )
+    new_password2 = forms.CharField(
+        label="Confirmar nueva contraseña",
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirmar nueva contraseña'})
+    )
+
 
 class ContactForm(forms.ModelForm):
     name = forms.CharField(min_length=8, max_length=50,

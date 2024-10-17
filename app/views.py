@@ -1329,12 +1329,4 @@ def list_rental_order(request):
         'total_products_sold': total_products_sold,
         'top_products': top_products,
     }
-<<<<<<< HEAD
     return render(request, "app/rental_order/list.html", data)
-
-def calculate_total_sold(products):
-    total_sold = OrderItem.objects.filter(products=products).aggregate(total=Sum('quantity'))['total']
-    return total_sold if total_sold else 0
-=======
-    return render(request, "app/rental_order/list.html", data)
->>>>>>> origin/dev

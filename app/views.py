@@ -54,6 +54,11 @@ from collections import Counter
 from django.db.models import F
 from django.contrib.auth.hashers import make_password
 
+
+# IMPORTS LOGICA TABLA ORDER ITEM
+from django.db.models import Sum
+from .models import OrderItem
+
 tok = None
 
 def is_staff(user):

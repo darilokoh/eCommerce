@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 import logging
 from datetime import timedelta
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,11 +25,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # En produccion debemos eliminar 'default-unsafe-key' del secret key
-#SECRET_KEY = os.environ.get('DJANGO_SECRET_KEYs','default-unsafe-key')
-SECRET_KEY = 'django-insecure-4%3q(w!sr_sg2&wv(^l2&+$c@dqsp(qf6ipkfxit(gc&6q3e2n'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEYs','default-unsafe-key')
 
-#if SECRET_KEY is None:
-#    raise ValueError("DJANGO_SECRET_KEY no esta seteada, definirla en las variables de entorno")
+if SECRET_KEY is None:
+    raise ValueError("DJANGO_SECRET_KEY no esta seteada, definirla en las variables de entorno")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -138,6 +138,8 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_HOST_USER = 'dario.vera96@gmail.com'  # Tu dirección de correo electrónico
 EMAIL_HOST_PASSWORD = 'vuvy xsgx vmmp nrll'  # Tu contraseña de correo electrónico
+#el siguiente solo para produccion
+#EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 

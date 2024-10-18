@@ -9,7 +9,7 @@ from django.http import Http404, HttpResponse, JsonResponse
 from rest_framework import viewsets, serializers
 from .serializers import ProductSerializer, CategorySerializer, ContactSerializer, QueryTypeSerializer, RentalOrderSerializer, RentalOrderItemSerializer, LoginSerializer
 import requests
-from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from app.cart import Cart
 from rest_framework.response import Response
 from django.conf import settings
@@ -20,7 +20,7 @@ from django.core.mail import send_mail
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view
 from django.middleware.csrf import get_token
-
+from django.views.decorators.http import require_http_methods
 from .serializers import TokenSerializer
 from .forms import UsuariosForm, LoginForm
 from django.contrib.auth.models import User
@@ -48,6 +48,9 @@ tok = None
 
 def is_staff(user):
     return (user.is_authenticated and user.is_superuser)
+
+def is_admin(user):
+    return user.groups.filter(name='admin').exists()
 
 # VIEWSETS PARA APIS
 
@@ -105,7 +108,7 @@ class ProductViewset(viewsets.ModelViewSet):
         serializer.save()
     from django.contrib.auth import update_session_auth_hash
 
-
+@require_http_methods(["GET", "POST"])
 @login_required
 def CambiarPassword(request):
     if request.method == 'POST':
@@ -176,6 +179,7 @@ class RentalOrderItemViewSet(viewsets.ModelViewSet):
 
 
 # VISTAS INICIALES
+@require_http_methods(["GET"])
 def home(request):
     # Definimos los parámetros para filtrar productos
     params = {
@@ -199,8 +203,7 @@ def home(request):
 
     return render(request, 'app/home.html', data)
 
-
-@csrf_exempt
+@require_http_methods(["GET", "POST"])
 @api_view(['GET', 'POST'])
 def catalogue(request):
     # Obtenemos los filtros desde el html
@@ -239,9 +242,7 @@ def catalogue(request):
 
     return render(request, 'app/catalogue.html', data)
 
-@csrf_exempt
-@api_view(['GET','POST'])
-@login_required(login_url='login') 
+@api_view(['GET','POST']) 
 def rental_service(request):
     if request.method == 'POST':
         form = RentalOrderForm(request.POST)
@@ -363,7 +364,7 @@ def rental_service(request):
 
 # CONTATO
 
-
+@api_view(['GET','POST'])
 def contact(request):
     data = {
         'form': ContactForm()
@@ -371,7 +372,7 @@ def contact(request):
 
     return render(request, 'app/contact/contact.html', data)
 
-
+@require_http_methods(["POST"])
 def update_contact_status(request, contact_id):
     if request.method == 'POST':
         status = request.POST.get('status')
@@ -383,8 +384,8 @@ def update_contact_status(request, contact_id):
 
     return redirect('list_contact')
 
-
-@permission_required('app.view_contact')
+@user_passes_test(is_admin)
+@require_http_methods(["GET"])
 def list_contact(request):
     status = request.GET.get('status', '')
     query_type = request.GET.get('query_type', '')
@@ -431,7 +432,6 @@ def list_contact(request):
 
 # VISTAS DE QUERYTYPE
 
-
 def get_object_query_type(id):
     response = requests.get(settings.API_BASE_URL + f'query-type/{id}/')
 
@@ -442,7 +442,7 @@ def get_object_query_type(id):
         print(f'Error al obtener el tipo de consulta: {response.content}')
         return None
 
-
+@require_http_methods(["GET", "POST"])
 def add_query_type(request):
     if request.method == 'POST':
         form = QueryTypeForm(request.POST, request.FILES)
@@ -471,7 +471,8 @@ def add_query_type(request):
 
     return render(request, 'app/querytype/add.html', data)
 
-
+@user_passes_test(is_admin)
+@require_http_methods(["GET"])
 def list_query_type(request):
     response = requests.get(settings.API_BASE_URL + 'query-type/')
     query_types = response.json()
@@ -489,7 +490,7 @@ def list_query_type(request):
     }
     return render(request, 'app/querytype/list.html', data)
 
-
+@require_http_methods(["GET", "POST"])
 def update_query_type(request, id):
     querytype_data = get_object_query_type(id)
 
@@ -566,7 +567,7 @@ def update_query_type(request, id):
             request, "Error al obtener el tipo de consulta de la API")
         return redirect(to="list_query_type")
 
-
+@require_http_methods(["POST"])
 def delete_query_type(request, id):
     querytype_data = get_object_query_type(id)
 
@@ -615,7 +616,8 @@ def get_object_product(id):
         return None
 
 
-@permission_required('app.add_product')
+@user_passes_test(is_admin)
+@require_http_methods(["GET", "POST"])
 def add_product(request):
     if request.method == 'POST':
         error_message = ""
@@ -693,7 +695,8 @@ def add_product(request):
     return render(request, 'app/product/add.html', data)
 
 
-@permission_required('app.view_product')
+@user_passes_test(is_admin)
+@require_http_methods(["GET"])
 def list_product(request):
     name_filter = request.GET.get('name', '')
     category_filter = request.GET.get('category', '')
@@ -733,7 +736,8 @@ def list_product(request):
     return render(request, 'app/product/list.html', data)
 
 
-@permission_required('app.change_product')
+@user_passes_test(is_admin)
+@require_http_methods(["GET", "POST"])
 def update_product(request, id):
     product_data = get_object_product(id)
 
@@ -824,7 +828,8 @@ def update_product(request, id):
         return redirect(to="list_product")
 
 
-@permission_required('app.delete_product')
+@user_passes_test(is_admin)
+@require_http_methods(["GET"])
 def delete_product(request, id):
     product_data = get_object_product(id)
 
@@ -854,7 +859,7 @@ def delete_product(request, id):
         # Redireccionar a la página de listado con mensaje de error
         return redirect(to="list_product")
 
-
+@require_http_methods(["GET"])
 def product_detail(request, id):
     # Realizar una solicitud GET a la API para obtener los detalles del producto
     response = requests.get(settings.API_BASE_URL + f'product/{id}/')
@@ -898,6 +903,7 @@ def product_detail(request, id):
 
 
 # METODOS DEL CARRITO NO API
+@require_http_methods(["GET"])
 def add_prod_cart(request, product_id):
     cart = Cart(request)
     product = Product.objects.get(id=product_id)
@@ -913,6 +919,7 @@ def add_prod_cart(request, product_id):
     return redirect(to="Cart")
 
 
+@require_http_methods(["GET"])
 def del_prod_cart(request, product_id):
     cart = Cart(request)
     product = Product.objects.get(id=product_id)
@@ -920,19 +927,20 @@ def del_prod_cart(request, product_id):
     return redirect(to="Cart")
 
 
+@require_http_methods(["GET"])
 def subtract_product_cart(request, product_id):
     cart = Cart(request)
     product = Product.objects.get(id=product_id)
     cart.subtract(product)
     return redirect("Cart")
 
-
+@require_http_methods(["GET"])
 def clean_cart(request):
     cart = Cart(request)
     cart.clean()
     return redirect("Cart")
 
-
+@require_http_methods(["GET"])
 def cart_page(request):
     products = Product.objects.all()
     data = {
@@ -941,7 +949,7 @@ def cart_page(request):
 
     return render(request, 'app/cart_page.html', data)
 
-
+@require_http_methods(["GET", "POST"])
 def buy_confirm(request):
     cart = Cart(request)
     cart.buy()
@@ -964,7 +972,8 @@ def get_object_category(id):
         return None
 
 
-@permission_required('app.add_category')
+@user_passes_test(is_admin)
+@require_http_methods(["GET", "POST"])
 def add_category(request):
     if request.method == 'POST':
         form = CategoryForm(request.POST, request.FILES)
@@ -993,7 +1002,8 @@ def add_category(request):
     return render(request, 'app/category/add.html', data)
 
 
-@permission_required('app.view_category')
+@user_passes_test(is_admin)
+@require_http_methods(["GET"])
 def list_category(request):
     response = requests.get(settings.API_BASE_URL + 'category/')
     categories = response.json()
@@ -1012,7 +1022,8 @@ def list_category(request):
     return render(request, 'app/category/list.html', data)
 
 
-@permission_required('app.change_category')
+@user_passes_test(is_admin)
+@require_http_methods(["GET", "POST"])
 def update_category(request, id):
     category_data = get_object_category(id)
 
@@ -1091,7 +1102,8 @@ def update_category(request, id):
         return redirect(to="list_category")
 
 
-@permission_required('app.delete_category')
+@user_passes_test(is_admin)
+@require_http_methods(["GET"])
 def delete_category(request, id):
     category_data = get_object_category(id)
 
@@ -1126,16 +1138,17 @@ def delete_category(request, id):
 
 # PANEL DE ADMIN
 
-
+@user_passes_test(is_admin)
+@require_http_methods(["GET", "POST"])
 def admin_panel(request):
 
     return render(request, 'app/admin_panel.html')
 
-
+@require_http_methods(["GET", "POST"])
 def pago(request):
     return render(request, "app/pago.html")
 
-
+@require_http_methods(["GET", "POST"])
 def user_login(request):
     global tok
     datos = {
@@ -1166,7 +1179,7 @@ def user_login(request):
                 return redirect(to="home")
     return render(request, "registration/login.html", datos)
 
-
+@require_http_methods(["GET", "POST"])
 def Recuperar(request):
     form = RecuperarForm(request.POST or None)
     if form.is_valid():
@@ -1219,7 +1232,7 @@ class LoginView(APIView):
         token, created = Token.objects.get_or_create(user=user)
         return Response({'token': token.key})
 
-
+@require_http_methods(["GET", "POST"])
 def Registrar(request):
     datos = {
         'form': UsuariosForm()
@@ -1259,8 +1272,7 @@ def Registrar(request):
 
     return render(request, "registration/Registrar.html", datos)
 
-
-@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def update_last_order_paid_status(user):
     try:
         last_order = Order.objects.filter(user=user).latest('id')
@@ -1269,7 +1281,7 @@ def update_last_order_paid_status(user):
     except Order.DoesNotExist:
         pass
 
-
+@require_http_methods(["GET", "POST"])
 def payment_success(request):
     if request.method == 'POST':
         # Obtener el usuario conectado actualmente
@@ -1303,7 +1315,7 @@ def payment_success(request):
 
     return render(request, 'app/pago.html')
 
-
+@require_http_methods(["GET", "POST"])
 def order_list(request):
     orders = Order.objects.prefetch_related('orderitem_set').all()
     page = request.GET.get('page', 1)
@@ -1365,7 +1377,7 @@ def obtain_token(request):
             })
     return Response({'error': 'Credenciales inválidas.'}, status=400)
 
-
+@require_http_methods(["GET", "POST"])
 def list_rental_order(request):
     product_name = request.GET.get('product_name')
     start_date = request.GET.get('start_date')

@@ -10,6 +10,7 @@ from django.forms import ModelForm
 #importaciones del proyecto
 from .models import Contact, Product, Category, QueryType, RentalOrder, Usuarios
 from .validators import MaxSizeFileValidator, validate_phone
+from django.contrib.auth.forms import PasswordChangeForm
 
 
 # Definir constantes para etiquetas repetidas
@@ -23,6 +24,22 @@ class PhoneField(forms.CharField):
         kwargs['validators'] = [validate_phone]
         kwargs['label'] = PHONE_LABEL
         super().__init__(*args, **kwargs)
+
+
+class CambiarPasswordForm(PasswordChangeForm):
+    old_password = forms.CharField(
+        label="Contraseña actual",
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Contraseña actual'})
+    )
+    new_password1 = forms.CharField(
+        label="Nueva contraseña",
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Nueva contraseña'})
+    )
+    new_password2 = forms.CharField(
+        label="Confirmar nueva contraseña",
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirmar nueva contraseña'})
+    )
+
 
 class ContactForm(forms.ModelForm):
     name = forms.CharField(min_length=8, max_length=50, required=True, label='Nombre completo')

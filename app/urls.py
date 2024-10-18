@@ -1,7 +1,7 @@
 from django.urls import path, include
 from .views import home, rental_service, catalogue, contact,\
     add_product, list_product, update_product, delete_product,\
-    ProductViewset, CategoryViewset, register, product_detail,\
+    ProductViewset, CategoryViewset,  product_detail,\
     add_prod_cart, del_prod_cart, subtract_product_cart,\
     clean_cart, cart_page, buy_confirm, add_category,\
     list_category, update_category, delete_category, admin_panel,\
@@ -40,9 +40,12 @@ router.register('query-type', QueryTypeViewset, basename='query-type')
 router.register(r'rental-orders', RentalOrderViewSet, basename='rental-orders')
 router.register(r'rental-order-items', RentalOrderItemViewSet)
 
+from django.urls import path
+from .views import CambiarPassword
+
 
 urlpatterns = [
-    
+    path('CambiarPassword/', CambiarPassword, name='CambiarPassword'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('', home, name="home"),
     path('catalogue/', catalogue, name="catalogue"),

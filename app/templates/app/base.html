@@ -79,6 +79,8 @@
             <input type="hidden" id="is-authenticated" value="{{ user.is_authenticated }}">
             <div class="nav-item logout">
               <a id="logout-link" class="nav-link" href="{% url 'logout' %}">CERRAR SESIÓN</a>
+              <a href="{% url 'CambiarPassword' %}">CAMBIAR CONTRASEÑA</a>
+
             </div>
 
             <div class="nav-item username">

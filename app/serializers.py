@@ -1,4 +1,4 @@
-from .models import Product, Category, Contact, QueryType, RentalOrder, RentalOrderItem, Tokens
+from .models import Product, Category, Contact, QueryType, RentalOrder, RentalOrderItem, Tokens, Region, Municipality
 from rest_framework import serializers
 from django.core.mail import send_mail
 from django.utils import timezone
@@ -145,3 +145,15 @@ class TokenSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(max_length=128, write_only=True)
+
+class RegionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Region
+        fields = ['id', 'name', 'code', 'short_name']
+
+class MunicipalitySerializer(serializers.ModelSerializer):
+    region = RegionSerializer()  # Incluye los datos de la región
+
+    class Meta:
+        model = Municipality
+        fields = ['id', 'name', 'region']

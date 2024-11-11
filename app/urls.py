@@ -5,31 +5,21 @@ from .views import home, rental_service, catalogue, contact,\
     add_prod_cart, del_prod_cart, subtract_product_cart,\
     clean_cart, cart_page, buy_confirm, add_category,\
     list_category, update_category, delete_category, admin_panel,\
-    ContactViewSet,pago, list_contact,\
+    ContactViewSet,checkout_view, list_contact,\
     QueryTypeViewset, update_contact_status, add_query_type, list_query_type,\
     update_query_type, delete_query_type, RentalOrderViewSet, list_rental_order,\
-    RentalOrderItemViewSet
+    RentalOrderItemViewSet, RegionViewSet, MunicipalityViewSet, webpay_init_transaction, \
+    webpay_return
 
-
-from unicodedata import name
 from . import views
-#from .views import index
-
 from .views import Registrar, order_list
 from django.contrib.auth.views import LoginView
 from .views import Recuperar,login
 from .views import user_login
-from django.views.generic import TemplateView
-from django.contrib.auth.views import LogoutView
-from django.conf import settings
-from django.conf.urls.static import static
-
-
-
+from django.urls import path
+from .views import CambiarPassword
 from .views import payment_success
 from .views import obtain_token
-
-
 from rest_framework import routers
 
 router = routers.DefaultRouter()
@@ -39,10 +29,8 @@ router.register('contact', ContactViewSet, basename='contact')
 router.register('query-type', QueryTypeViewset, basename='query-type')
 router.register(r'rental-orders', RentalOrderViewSet, basename='rental-orders')
 router.register(r'rental-order-items', RentalOrderItemViewSet)
-
-from django.urls import path
-from .views import CambiarPassword
-
+router.register('regions', RegionViewSet, basename='regions')
+router.register('municipalities', MunicipalityViewSet, basename='municipalities')
 
 urlpatterns = [
     path('CambiarPassword/', CambiarPassword, name='CambiarPassword'),
@@ -74,7 +62,7 @@ urlpatterns = [
     path("cart/", cart_page, name="Cart"),
     path("buy-confirm/", buy_confirm, name="buy_confirm"),
     path("admin-panel/", admin_panel, name="admin_panel"),
-    path('pago/', pago, name="pago"),
+    path('checkout/', checkout_view, name="checkout_view"),
     path('Recuperar/', Recuperar, name='Recuperar'),
     path('payment_success/', payment_success, name='payment_success'),
     path('payment_success/', views.update_last_order_paid_status, name='update_last_order_paid_status'),
@@ -88,4 +76,6 @@ urlpatterns = [
     path('api/token/', obtain_token, name='obtain_token'),
     path('login/', LoginView.as_view(template_name='login.html'), name='login'),
     path('api/login', login, name='login_api'),
+    path("webpay/init/", webpay_init_transaction, name="webpay_init"),
+    path("webpay/return/", webpay_return, name="webpay_return"),
 ]

@@ -76,6 +76,9 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     order_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, null=True)
+    email = models.EmailField(null=True, blank=True)
+    region = models.CharField(max_length=100, null=True, blank=True)
+    municipality = models.CharField(max_length=100, null=True, blank=True)
     address = models.CharField(max_length=100, null=True)
     phone = models.CharField(max_length=9, null=True)
     accumulated = models.DecimalField(max_digits=10, decimal_places=2)
@@ -114,3 +117,18 @@ class RentalOrderItem(models.Model):
 
     def __str__(self):
         return f"{self.product_name} - Amount: {self.amount}"
+
+class Region(models.Model):  # Región
+    code = models.CharField(max_length=10)
+    name = models.CharField(max_length=100)
+    short_name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+class Municipality(models.Model):  # Comuna
+    name = models.CharField(max_length=100)
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name="municipalities")
+
+    def __str__(self):
+        return self.name

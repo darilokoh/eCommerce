@@ -119,3 +119,29 @@ function toggleCartVisibility() {
 // font-family: 'Advent Pro', sans-serif;
 // font-family: 'Amaranth', sans-serif;
 // font-family: 'Convergence', sans-serif;
+
+$(document).ready(function() {
+    $('#id_region').change(function() {
+        var regionId = $(this).val();
+        var municipalitySelect = $('#id_municipality');
+
+        // Limpiar las opciones anteriores
+        municipalitySelect.empty();
+        municipalitySelect.append('<option value="">Seleccione una comuna</option>');
+
+        if (regionId) {
+            $.ajax({
+                url: "/api/municipalities/",
+                data: { 'region_id': regionId },
+                success: function(data) {
+                    $.each(data, function(index, municipality) {
+                        municipalitySelect.append('<option value="' + municipality.id + '">' + municipality.name + '</option>');
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error en la solicitud AJAX:", error);
+                }
+            });
+        }
+    });
+});

@@ -8,9 +8,11 @@ from django.core.validators import MinValueValidator
 from django.forms import ModelForm
 
 #importaciones del proyecto
-from .models import Contact, Product, Category, QueryType, RentalOrder, Usuarios
+from .models import Contact, Product, Category, QueryType, RentalOrder, Usuarios, Order
 from .validators import MaxSizeFileValidator, validate_phone
 from django.contrib.auth.forms import PasswordChangeForm
+
+from .api_helpers import LocationAPI
 
 
 # Definir constantes para etiquetas repetidas
@@ -160,3 +162,48 @@ class RentalOrderForm(forms.ModelForm):
 
 class RecuperarForm(forms.Form):
     email = forms.EmailField(label=EMAIL_LABEL)
+
+class OrderForm(forms.ModelForm):
+    class Meta:
+        model = Order
+        fields = ["user", "name", "email", "region", "municipality", "address", "phone", "accumulated"]
+        widgets = {
+            "user": forms.TextInput(attrs={"class": "form-control hidden-field"}), #hidden-field para ocultar
+            "name": forms.TextInput(attrs={"class": "form-control", "required": True}),
+            "email": forms.EmailInput(attrs={"class": "form-control", "required": True}),
+            "address": forms.TextInput(attrs={"class": "form-control", "required": True}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
+            "accumulated": forms.NumberInput(attrs={"class": "form-control hidden-field", "readonly": True}),
+        }
+        labels = {
+            "name": "Nombre Completo",
+            "email": "Correo Electrónico",
+            "region": "Región",
+            "municipality": "Comuna",
+            "address": "Dirección",
+            "phone": "Teléfono",
+            "accumulated": "Total CLP",
+        }
+
+    email = forms.EmailField(required=True, label="Correo Electrónico", widget=forms.EmailInput(attrs={"class": "form-control"}))
+
+    region = forms.ChoiceField(
+        required=True,
+        label="Región",
+        choices=[],  # Define las choices como una lista vacía, para establecerlas en la vista
+        widget=forms.Select(attrs={"class": "form-control"})
+    )
+    municipality = forms.ChoiceField(
+        required=True,
+        label="Comuna",
+        choices=[('', 'Seleccione una comuna')],  # Esto se inicializará desde la vista
+        widget=forms.Select(attrs={"class": "form-control"})
+    )
+
+    def __init__(self, *args, **kwargs):
+        # Recibe choices dinámicas desde la vista
+        region_choices = kwargs.pop('region_choices', [])
+        municipality_choices = kwargs.pop('municipality_choices', [])
+        super().__init__(*args, **kwargs)
+        self.fields['region'].choices = region_choices
+        self.fields['municipality'].choices = municipality_choices

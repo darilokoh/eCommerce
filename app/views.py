@@ -1,13 +1,13 @@
 from django.shortcuts import render, redirect
-from .forms import CambiarPasswordForm, ContactForm, ProductForm, CategoryForm, QueryTypeForm, RentalOrderForm, RecuperarForm
+from .forms import CambiarPasswordForm, ContactForm, ProductForm, CategoryForm, QueryTypeForm, RentalOrderForm, RecuperarForm, OrderForm
 from django.contrib import messages
 from datetime import timedelta
 from django.contrib.auth import authenticate, login
-from .models import Product, Category, Contact, QueryType, RentalOrder, RentalOrderItem
+from .models import Product, Category, Contact, QueryType, RentalOrder, RentalOrderItem, Order, OrderItem, Tokens, Region, Municipality
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse, HttpRequest
 from rest_framework import viewsets, serializers
-from .serializers import ProductSerializer, CategorySerializer, ContactSerializer, QueryTypeSerializer, RentalOrderSerializer, RentalOrderItemSerializer, LoginSerializer
+from .serializers import ProductSerializer, CategorySerializer, ContactSerializer, QueryTypeSerializer, RentalOrderSerializer, RentalOrderItemSerializer, LoginSerializer, RegionSerializer, MunicipalitySerializer
 import requests
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from app.cart import Cart
@@ -15,7 +15,6 @@ from rest_framework.response import Response
 from django.conf import settings
 from django.db.models import Sum, Q
 from django.views.decorators.csrf import csrf_exempt
-from .models import Order, OrderItem
 from django.core.mail import send_mail
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view
@@ -27,20 +26,17 @@ from django.contrib.auth.models import User
 import requests
 from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
-from .models import Tokens
-from django.http import HttpRequest
 from django.utils import timezone
-from django.http import HttpRequest
-
 from dateutil.parser import parse
 from collections import Counter
-from django.db.models import F
 from django.contrib.auth.hashers import make_password
 
+# IMPORTS API TRANSBANK
+from transbank.webpay.webpay_plus.transaction import Transaction, WebpayOptions
+from transbank.common.integration_type import IntegrationType
 
-# IMPORTS LOGICA TABLA ORDER ITEM
-from django.db.models import Sum
-from .models import OrderItem
+# API HELPERS
+from .api_helpers import LocationAPI, ProductAPI
 
 from django.utils.crypto import get_random_string
 tok = None
@@ -128,7 +124,6 @@ def CambiarPassword(request):
 
     return render(request, 'registration/CambiarPassword.html', {'form': form})
 
-
 class ContactViewSet(viewsets.ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
@@ -158,7 +153,6 @@ class ContactViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-
 class QueryTypeViewset(viewsets.ModelViewSet):
     queryset = QueryType.objects.all()
     serializer_class = QueryTypeSerializer
@@ -177,6 +171,18 @@ class RentalOrderItemViewSet(viewsets.ModelViewSet):
     queryset = RentalOrderItem.objects.all()
     serializer_class = RentalOrderItemSerializer
 
+class RegionViewSet(viewsets.ReadOnlyModelViewSet):  # Solo lectura
+    queryset = Region.objects.all()
+    serializer_class = RegionSerializer
+
+class MunicipalityViewSet(viewsets.ReadOnlyModelViewSet):  # Solo lectura
+    serializer_class = MunicipalitySerializer
+
+    def get_queryset(self):
+        region_id = self.request.query_params.get('region_id')
+        if region_id:
+            return Municipality.objects.filter(region_id=region_id)
+        return Municipality.objects.all()
 
 # VISTAS INICIALES
 @require_http_methods(["GET"])
@@ -363,7 +369,6 @@ def rental_service(request):
     return render(request, 'app/rental_service.html', data)
 
 # CONTATO
-
 @api_view(['GET','POST'])
 def contact(request):
     data = {
@@ -1145,8 +1150,33 @@ def admin_panel(request):
     return render(request, 'app/admin_panel.html')
 
 @require_http_methods(["GET", "POST"])
-def pago(request):
-    return render(request, "app/pago.html")
+def checkout_view(request):
+    # Obtén las regiones y comunas desde la API
+    regiones = LocationAPI.get_regions()
+    comunas = LocationAPI.get_municipalities()
+    
+    # Calcula el cart_total sumando los precios y cantidades de los productos en el carrito
+    cart_items = request.session.get('cart', {}).items()
+    cart_total = sum(value.get('product_price', 0) * value.get('amount', 1) for key, value in cart_items)
+
+    # Prepara las opciones de región para pasarlas al formulario
+    region_choices = [('', 'Seleccione una región')] + [(region['id'], region['name']) for region in regiones]
+    municipality_choices = [('', 'Seleccione una comuna')] + [(comuna['id'], comuna['name']) for comuna in comunas]
+
+    # Inicializa el formulario con datos iniciales y opciones dinámicas
+    initial_data = {
+        "user": request.user.id if request.user.is_authenticated else None,
+        "accumulated": cart_total,
+    }
+    form = OrderForm(initial=initial_data, region_choices=region_choices, municipality_choices=municipality_choices)
+
+    context = {
+        "form": form,
+        "regiones": regiones,
+        "comunas": comunas,
+        "cart_total": cart_total,
+    }
+    return render(request, "app/checkout.html", context)
 
 @require_http_methods(["GET", "POST"])
 def user_login(request):
@@ -1218,7 +1248,6 @@ def Recuperar(request):
 
 # se crea usuario nuevo y token
 
-
 class LoginView(APIView):
     def post(self, request, format=None):
         django_request = HttpRequest()
@@ -1284,36 +1313,31 @@ def update_last_order_paid_status(user):
 @require_http_methods(["GET", "POST"])
 def payment_success(request):
     if request.method == 'POST':
-        # Obtener el usuario conectado actualmente
         user = request.user if request.user.is_authenticated else None
         name = request.POST.get('name')
         address = request.POST.get('address')
         phone = request.POST.get('phone')
         accumulated = request.POST.get('accumulated')
 
-        # Crear la instancia de la orden
-        order = Order(user=user, name=name, address=address,
-                      phone=phone, accumulated=accumulated)
+        # Crear la orden
+        order = Order(user=user, name=name, address=address, phone=phone, accumulated=accumulated)
+        
+        # Guarda la orden y asegúrate de que el ID se genere
         order.save()
 
-        # Obtener los productos del carro de compras
-        cart_items = request.session.get('cart', {}).items()
-
         # Agregar los productos a la orden
+        cart_items = request.session.get('cart', {}).items()
         for key, value in cart_items:
             product_name = value.get('product_name')
             product_price = value.get('product_price')
             amount = value.get('amount')
-
-            # Crear la instancia del producto de la orden y establecer la relación con la orden
-            order_item = OrderItem(
-                order=order, product_name=product_name, product_price=product_price, amount=amount)
+            order_item = OrderItem(order=order, product_name=product_name, product_price=product_price, amount=amount)
             order_item.save()
 
-        # Lógica adicional, como enviar un correo electrónico de confirmación, generar una factura, etc.
-        return render(request, 'app/payment_success.html')
+        # Asegúrate de pasar el objeto `order` al template
+        return render(request, 'app/payment_success.html', {'order': order})
 
-    return render(request, 'app/pago.html')
+    return render(request, 'app/checkout.html')
 
 @require_http_methods(["GET", "POST"])
 def order_list(request):
@@ -1461,3 +1485,76 @@ def list_rental_order(request):
         'top_products': top_products,
     }
     return render(request, "app/rental_order/list.html", data)
+
+
+# Implementacion API Transbank
+def webpay_init_transaction(request):
+    if request.method == 'POST':
+        buy_order = request.POST.get("buy_order")
+        session_id = request.POST.get("session_id")
+        amount = request.POST.get("amount")
+
+        # Verificar si los valores están vacíos
+        if not buy_order or not amount or not session_id:
+            return JsonResponse({"error": "Datos faltantes en la solicitud de transacción"})
+
+        # Configuración de Transbank para el ambiente de integración
+        return_url = "http://127.0.0.1:8000/webpay/return/"
+        tx = Transaction(
+            WebpayOptions(
+                "597055555532",                       
+                "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",  
+                IntegrationType.TEST              # Modo de prueba, cambiar a .LIVE para PRODUCCION    
+            )
+        )
+
+        response = tx.create(buy_order, session_id, amount, return_url)
+
+        if "token" in response and "url" in response:
+            return redirect(response["url"] + "?token_ws=" + response["token"])
+        else:
+            return JsonResponse({"error": "Error al iniciar la transacción con Webpay.", "detalle": response})
+
+    return JsonResponse({"error": "Método no permitido"}, status=405)
+
+def webpay_return(request):
+    """
+    Confirma la transacción cuando el usuario regresa desde Webpay.
+    """
+    token = request.GET.get("token_ws")
+
+    # Configuración de Transbank para el ambiente de integración
+    tx = Transaction(
+        WebpayOptions(
+            "597055555532",                        # Código de comercio de prueba
+            "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",  # API Key de prueba
+            IntegrationType.TEST                   # Modo de prueba, cambiar a .LIVE para PRODUCCION
+        )
+    )
+
+    # Realizar la confirmación de la transacción
+    response = tx.commit(token)
+    
+    # Acceder a los valores del diccionario directamente
+    if response.get("response_code") == 0:
+        return render(request, "app/transbank/payment_success.html", {"response": response})
+    else:
+        return render(request, "app/transbank/payment_failed.html", {"error": "Transacción rechazada."})
+    
+# API VIEWS para Location
+@api_view(['GET'])
+def list_regions(request):
+    regions = Region.objects.all()
+    serializer = RegionSerializer(regions, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+def list_municipalities(request):
+    region_id = request.GET.get('region_id')
+    if region_id:
+        municipalities = Municipality.objects.filter(region_id=region_id)
+    else:
+        municipalities = Municipality.objects.all()
+    
+    serializer = MunicipalitySerializer(municipalities, many=True)
+    return Response(serializer.data)

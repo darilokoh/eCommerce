@@ -614,3 +614,23 @@ figure:hover img {
   }
 }
 
+/* Aplica estilo a los labels con la clase 'required' */
+label.required::after {
+  content: " (*)";       /* Añade un asterisco después del texto del label */
+  color: red;          /* Colorea el asterisco en rojo */
+  font-weight: bold;   /* Opcional: pone en negrita el asterisco */
+}
+
+.hidden-field {
+  display: none;
+}
+
+.nav-item.username .user-link {
+  display: flex;
+  align-items: center; /* Alinea el ícono y el texto verticalmente */
+}
+
+.welcome-text {
+  margin-left: 12px; /* Añade un pequeño espacio entre el ícono y el texto */
+  line-height: 1.2; /* Ajusta el interlineado para que el texto no ocupe demasiado espacio vertical */
+}

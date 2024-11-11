@@ -15,6 +15,8 @@
 
   <link rel="stylesheet" href="{% static 'app/css/styles.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK" crossorigin="anonymous"></script>
+
   <style>
     body {
         background-image: url("{% static 'app/img/background.png' %}");
@@ -56,7 +58,6 @@
               </li>
             </ul>
 
-
             {% load auth_extras %}
 
             {% if request.user|has_group:"admin" %}
@@ -75,24 +76,23 @@
             {% endif %}
 
             {% if user.is_authenticated %}
-            <input type="hidden" id="is-authenticated" value="{{ user.is_authenticated }}">
-            <div class="nav-item logout">
-              <a id="logout-link" class="nav-link" href="{% url 'logout' %}">CERRAR SESIÓN</a>
-              <a href="{% url 'CambiarPassword' %}">CAMBIAR CONTRASEÑA</a>
+                <input type="hidden" id="is-authenticated" value="{{ user.is_authenticated }}">
 
-            </div>
-
-            <div class="nav-item username">
-              <a class="nav-link user-link" href="#">
-                  <i class="fas fa-user"></i> {{ user.username }}
-              </a>
-            </div>
+                <div class="nav-item dropdown">
+                    <a class="nav-link user-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user"></i>
+                        <span class="welcome-text ml-2">¡Bienvenido!<br>{{ user.username }}</span>
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="{% url 'CambiarPassword' %}">Cambiar Contraseña</a></li>
+                        <li><a class="dropdown-item" href="{% url 'logout' %}">Cerrar Sesión</a></li>
+                    </ul>
+                </div>
             {% else %}
-            <div class="nav-item login">
-              <a class="nav-link" aria-current="page" href="{% url 'login' %}">INICIAR SESIÓN | REGISTRARSE</a>
-            </div>
-          </div>
-          {% endif %}
+                <div class="nav-item login">
+                    <a class="nav-link" aria-current="page" href="{% url 'login' %}">Iniciar Sesión | Registrarse</a>
+                </div>
+            {% endif %}
           <button id="cart-toggle" class="btn btn-primary">
             Ver Carrito <i class="fas fa-shopping-cart"></i>
           </button>
@@ -110,7 +110,7 @@
         <table class="table table-bordered table-hover table-responsive-sm">
           <thead>
             <tr>
-              <h2 style="text-align: center; justify-content: center;" class="my-2">Carrito</h1>
+              <h2 style="text-align: center; justify-content: center;" class="my-2">Carrito</h2>
                 <br>
             </tr>
             <tr>
@@ -151,7 +151,7 @@
         <div class="row text-center">
           <div class="col-6"><a href="{% url 'Clean' %}" class="btn btn-danger">Limpiar</a></div>
           {% if request.session.cart.items %}
-          <div class="col-6"><a href="{% url 'pago' %}" class="btn btn-warning">Pagar</a></div>
+          <div class="col-6"><a href="{% url 'checkout_view' %}" class="btn btn-warning">Pagar</a></div>
           {% else %}
           <div class="col-6"><button class="btn btn-warning" disabled>Pagar</button></div>
           {% endif %}
@@ -188,7 +188,6 @@
     crossorigin="anonymous"></script>
     
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 
   {% if messages %}
   {% for m in messages %}

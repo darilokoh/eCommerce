@@ -1,36 +1,63 @@
 {% extends 'app/base.html' %}
-
 {% load static %}
 {% block css %}
+<style>
+    .card {
+        padding: 20px;
+        margin-top: 50px;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .card-body {
+        text-align: center;
+    }
+    
+    .form {
+        margin-top: 20px;
+    }
+    
+    .form-group {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    
+    .btn-primary {
+        margin-top: 20px;
+    }
+    
+    .text-center {
+        margin-top: 10px;
+    }
+</style>
 <title>Conejo Furioso - Iniciar Sesión</title>
 {% endblock %}
 
 {% block content %}
-
-{% load humanize %}
-    {% load crispy_forms_tags %}
-    <br><br>
-    <div class="container my-5" style="max-width: 600px;">
-        <div class="row d-flex justify-content-center">
-            <div class="col-12 col-md-6">
-                <div class="card my-5">
-                    <div class="card-body">
-                        <h2 class="text-center">Ingresa tus credenciales </h2>
-                        <hr>
-                        <form action="" method="post" class="form">
-                            {% csrf_token %}
-                            {{form | crispy }}
-                            <a href="{% url 'home' %}">Inicio</a> |
-                            <a href="{% url 'register' %}">Regístrate</a>
-                            <br>
-                            <button type="submit" class="btn btn-default bg-primary-3">Ingresar</button>
-                        </form>
-                             
-                    </div>
-                </div>
+<br><br><br><br><br>
+<div class="card">
+    <div class="card-body">
+        <h2>Ingresa tus credenciales</h2>
+        <hr>
+        <form action="" method="post" class="form">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ form.usrN.label_tag }}
+                {{ form.usrN }}
             </div>
+            <div class="form-group">
+                {{ form.pswrdN.label_tag }}
+                {{ form.pswrdN }}
+            </div>
+            <input type="submit" name="loginBTN" value="Login" class="btn btn-default bg-primary-3 mt-3" />
+        </form>
+        
+        <div class="text-center">
+            <a href="{% url 'Recuperar' %}" class="text-center">¿Olvidaste contraseña?</a><br>
+            <a href="{% url 'Registrar' %}" class="text-center">Crear nuevo usuario</a>
         </div>
-        <br><br><br><br><br><br><br><br>
     </div>
-
+</div>
+<script type="text/javascript" src="{%static 'app/js/scripts.js'%}"></script> 
 {% endblock %}

@@ -7,21 +7,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   {% load static %}
   {% load auth_extras %}
+  <title>{% block title %}Conejo Furioso{% endblock %}</title>
   {% block css %}
   {% endblock %}
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet"
     integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+
   <link rel="stylesheet" href="{% static 'app/css/styles.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK" crossorigin="anonymous"></script>
 
-
-
+  <style>
+    body {
+        background-image: url("{% static 'app/img/background.png' %}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed; /* Para que el fondo sea fijo al hacer scroll */
+        background-repeat: no-repeat;
+    }
+</style>
 </head>
 
 
 <body>
   <div class="header">
     <header>
-      <nav class="navbar navbar-expand-lg fixed-top bg-primary text-white">
+      <nav class="navbar navbar-expand-lg fixed-top bg-primary nav-gradient">
         <div class="container">
           <a class="navbar-brand" href="{% url 'home' %}">
             <img src="{% static 'app/img/logo.png' %}" alt="Bootstrap" width="75" height="60">
@@ -40,36 +51,45 @@
                 <a class="nav-link" href="{% url 'catalogue' %}">CATÁLOGO</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{% url 'services' %}">SERVICIOS</a>
+                <a class="nav-link" href="{% url 'rental_service' %}">SERVICIOS</a>
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'contact' %}">CONTACTO</a>
               </li>
             </ul>
 
+            {% load auth_extras %}
 
-            <div class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown"
-                aria-expanded="false">ADMINISTRACIÓN</a>
-              <ul class="dropdown-menu" aria-labelledby="adminDropdown">
-                <li><a class="dropdown-item" href="{% url 'list_product' %}">Productos</a></li>
-                <li><a class="dropdown-item" href="{% url 'list_category' %}">Categorías</a></li>
-                <li><a class="dropdown-item" href="{% url 'list_contact' %}">Contactos</a></li>
-                <li><a class="dropdown-item" href="{% url 'list_query_type' %}">Tipo Consulta</a></li>
-              </ul>
-            </div>
-
+            {% if request.user|has_group:"admin" %}
+                <div class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown"
+                    aria-expanded="false" tabindex="0"
+                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { this.click(); }">ADMINISTRACIÓN</a>
+                    <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                        <li><a class="dropdown-item" href="{% url 'list_product' %}">Productos</a></li>
+                        <li><a class="dropdown-item" href="{% url 'list_category' %}">Categorías</a></li>
+                        <li><a class="dropdown-item" href="{% url 'list_contact' %}">Contactos</a></li>
+                        <li><a class="dropdown-item" href="{% url 'list_query_type' %}">Tipo Consulta</a></li>
+                        <li><a class="dropdown-item" href="{% url 'order_list' %}">Ordenes</a></li>
+                    </ul>
+                </div>
+            {% endif %}
 
             {% if user.is_authenticated %}
-            <input type="hidden" id="is-authenticated" value="{{ user.is_authenticated }}">
-            <div class="nav-item logout">
-              <a id="logout-link" class="nav-link" href="{% url 'logout' %}">CERRAR SESIÓN</a>
-            </div>
+                <input type="hidden" id="is-authenticated" value="{{ user.is_authenticated }}">
 
-            <div class="nav-item username">
-              <a class="nav-link" href="#">@{{ user.username }}</a>
-            </div>
+                <div class="nav-item dropdown">
+                    <a class="nav-link user-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user"></i>
+                        <span class="welcome-text ml-2">¡Bienvenido!<br>{{ user.username }}</span>
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="{% url 'CambiarPassword' %}">Cambiar Contraseña</a></li>
+                        <li><a class="dropdown-item" href="{% url 'logout' %}">Cerrar Sesión</a></li>
+                    </ul>
+                </div>
             {% else %}
+<<<<<<< HEAD
             <div class="nav-item login">
               <a class="nav-link" aria-current="page" href="{% url 'login' %}">INICIAR SESIÓN | REGISTRARSE</a>
             </div>
@@ -80,6 +100,15 @@
             CARRITO
           </button>
         </div>
+=======
+                <div class="nav-item login">
+                    <a class="nav-link" aria-current="page" href="{% url 'login' %}">Iniciar Sesión | Registrarse</a>
+                </div>
+            {% endif %}
+          <button id="cart-toggle" class="btn btn-primary">
+            Ver Carrito <i class="fas fa-shopping-cart"></i>
+          </button>
+>>>>>>> dev
         </div>
   </div>
   </nav>
@@ -87,6 +116,7 @@
   </div>
 
   <main class="bg-primary-2">
+<<<<<<< HEAD
     <div class="modal fade" id="cartModal" tabindex="-1" role="dialog" aria-labelledby="cartModalLabel"
       aria-hidden="true">
       <div class="modal-dialog modal-dialog-right modal-lg" role="document">
@@ -142,6 +172,60 @@
             <a href="{% url 'Clean' %}" class="btn btn-danger">Limpiar</a>
             <a href="{% url 'pago' %}" class="btn btn-warning">Pagar</a>
           </div>
+=======
+
+    <div id="cart" class="cart-container">
+      <button id="cart-close" class="cart-close-button">X</button>
+      <div class="alert alert-secondary my-5" role="alert">
+        <table class="table table-bordered table-hover table-responsive-sm">
+          <thead>
+            <tr>
+              <h2 style="text-align: center; justify-content: center;" class="my-2">Carrito</h2>
+                <br>
+            </tr>
+            <tr>
+              <th scope="col">Nombre</th>
+              <th scope="col">Precio</th>
+              <th scope="col">Cantidad</th>
+              <th scope="col">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if request.session.cart.items %}
+            {% for key, value in request.session.cart.items %}
+            <tr>
+              <td><strong>{{value.product_name}}</strong></td>
+              <td>{{value.product_price}}</td>
+              <td>{{value.amount}}
+                <a href="{% url 'Add' value.product_id %}" class="badge btn btn-dark badge-dark">+</a>
+                <a href="{% url 'Sub' value.product_id %}" class="badge btn btn-dark badge-dark">-</a>
+              </td>
+              <td>{{value.accumulated}}</td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="4">
+                <div class="alert alert-danger text-center">Sin Productos</div>
+              </td>
+            </tr>
+            {% endif %}
+            <tr>
+              <th colspan="3" class="text-right" scope="col">Total Compra:</th>
+              <th scope="col">$ {{cart_total}}</th>
+            </tr>
+          </tbody>
+
+        </table>
+        <hr>
+        <div class="row text-center">
+          <div class="col-6"><a href="{% url 'Clean' %}" class="btn btn-danger">Limpiar</a></div>
+          {% if request.session.cart.items %}
+          <div class="col-6"><a href="{% url 'checkout_view' %}" class="btn btn-warning">Pagar</a></div>
+          {% else %}
+          <div class="col-6"><button class="btn btn-warning" disabled>Pagar</button></div>
+          {% endif %}
+>>>>>>> dev
         </div>
       </div>
     </div>
@@ -150,17 +234,17 @@
 
     <!-- Aquí todo lo correspondiente al footer -->
   </main>
-  <footer class="bg-primary text-dark mt-auto">
+  <footer class="text-light mt-auto">
     <div class="container">
       <div class="row py-2">
         <div class="col-1 col-sm-12">
-          <div class="nav-item">
-            <a class="nav-link" href="https://www.instagram.com/cervezaconejofurioso/">Instagram</a>
+          <div class="ft-item">
+            <a class="ft-link" href="https://www.instagram.com/cervezaconejofurioso/">Instagram</a>
           </div>
         </div>
         <div class="col-1 col-sm-12">
-          <div class="nav-item">
-            <a class="nav-link" href="https://www.facebook.com/CervezaConejoFurioso">Facebook</a>
+          <div class="ft-item">
+            <a class="ft-link" href="https://www.facebook.com/CervezaConejoFurioso">Facebook</a>
           </div>
         </div>
         <div class="row mt-2" style="font-weight: bold;">
@@ -172,8 +256,8 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
     crossorigin="anonymous"></script>
+    
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 
   {% if messages %}
   {% for m in messages %}
@@ -188,10 +272,6 @@
       cancelButtonText: "No"
     }).then((result) => {
       if (result.isConfirmed) {
-        // Lógica para eliminar el producto
-        // Puedes realizar una petición AJAX o redirigir a una URL específica
-      } else {
-        // Lógica si el usuario cancela la eliminación
       }
     });
   </script>

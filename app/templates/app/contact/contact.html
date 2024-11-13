@@ -1,8 +1,12 @@
 {% extends 'app/base.html' %}
 {% load static %}
+{% block title %}Contacto | Conejo Furioso{% endblock %}
 {% load crispy_forms_tags %}
 {% block css %}
+<<<<<<< HEAD
 <title>Conejo Furioso | Contacto</title>
+=======
+>>>>>>> dev
 {% endblock %}
 
 {% block content %}
@@ -18,7 +22,11 @@
 
     <div class="card">
         <div class="card-header card-header-form">
+<<<<<<< HEAD
             ¡Envíanos un mensaje y te contactaremos!
+=======
+            Envíanos un mensaje y te contactaremos !
+>>>>>>> dev
         </div>
         <div class="card-body">
             <blockquote class="blockquote mb-0">
@@ -36,7 +44,13 @@
                             {% endif %}
                         </div>
                     {% endfor %}
+<<<<<<< HEAD
                     <center><button type="submit" class="btn btn-default bg-primary-3">Enviar</button></center>
+=======
+                    <div style="text-align: center;">
+                        <button type="submit" class="btn btn-default bg-primary-3 mt-3">Enviar</button>
+                    </div>                    
+>>>>>>> dev
                 </form>
                 {{ message }}
             </blockquote>
@@ -60,17 +74,32 @@
             if (response.ok) {
                 // La solicitud fue exitosa
                 // Realizar cualquier acción adicional o mostrar un mensaje de éxito
-                alert("Mensaje enviado correctamente");
+                Swal.fire({
+                    title: "Mensaje enviado",
+                    text: "Tu mensaje ha sido enviado correctamente",
+                    icon: "success"
+                }).then(() => {
+                    // Redirigir al usuario al inicio
+                    window.location.href = "/";
+                });
             } else {
                 // La solicitud falló
                 // Realizar cualquier acción adicional o mostrar un mensaje de error
-                alert("Error al enviar el mensaje");
+                Swal.fire({
+                    title: "Error",
+                    text: "Hubo un error al enviar el mensaje",
+                    icon: "error"
+                });
             }
         })
         .catch(error => {
             console.error(error);
             // Realizar cualquier acción adicional o mostrar un mensaje de error
-            alert("Error al enviar el mensaje");
+            Swal.fire({
+                title: "Error",
+                text: "Hubo un error al enviar el mensaje",
+                icon: "error"
+            });
         });
     });
 </script>

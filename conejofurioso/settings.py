@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+import logging
+from datetime import timedelta
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,17 +24,36 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-4%3q(w!sr_sg2&wv(^l2&+$c@dqsp(qf6ipkfxit(gc&6q3e2n'
+# En produccion debemos eliminar 'default-unsafe-key' del secret key
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEYs','default-unsafe-key')
+
+if SECRET_KEY is None:
+    raise ValueError("DJANGO_SECRET_KEY no esta seteada, definirla en las variables de entorno")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'darioveram.pythonanywhere.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'darioveramunoz.pythonanywhere.com']
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.cookie.CookieStorage"
 
-LOGIN_REDIRECT_URL = '/'
+
 LOGOUT_REDIRECT_URL ='/'
+
+# Define la ubicación del archivo de registros
+# LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+# os.makedirs(LOGS_DIR, exist_ok=True)
+# LOG_FILE = os.path.join(LOGS_DIR, 'app.log')
+
+# # Configuración de registros
+# logging.basicConfig(
+#     level=logging.DEBUG,  # Nivel de registros, puedes ajustarlo según tus necesidades
+#     format='%(asctime)s [%(levelname)s] %(message)s',
+#     handlers=[
+#         logging.FileHandler(LOG_FILE),  # Guarda los registros en un archivo
+#         logging.StreamHandler()  # Muestra los registros en la consola
+#     ]
+# )
 
 # Application definition
 
@@ -47,13 +69,38 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'rest_framework',
-    'schedule'
+    'schedule',
+    'rest_framework.authtoken', 
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    
+]
+
+SITE_ID = 1
+LOGIN_REDIRECT_URL = "/"
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    }
+}
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -89,12 +136,15 @@ WSGI_APPLICATION = 'conejofurioso.wsgi.application'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'erreapectm@gmail.com'  # Tu dirección de correo electrónico
-EMAIL_HOST_PASSWORD = 'pouwksiilwdoiblc'  # Tu contraseña de correo electrónico
+EMAIL_HOST_USER = 'dario.vera96@gmail.com'  # Tu dirección de correo electrónico
+EMAIL_HOST_PASSWORD = 'vuvy xsgx vmmp nrll'  # Tu contraseña de correo electrónico
+#el siguiente solo para produccion
+#EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Configuracion API URL
+# API_BASE_URL = 'http://darioveramunoz.pythonanywhere.com/api/'
 API_BASE_URL = 'http://127.0.0.1:8000/api/'
 
 # Database
@@ -138,6 +188,20 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES':[
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PARSER_CLASSES': (
+    'rest_framework.parsers.JSONParser',
+    'rest_framework.parsers.FormParser',
+    'rest_framework.parsers.MultiPartParser',
+),
+}
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -169,4 +233,16 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
     }
+}
+
+
+STATIC_URL = 'static/'
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
 }

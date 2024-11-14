@@ -41,43 +41,6 @@
     </div>
 </div>
 
-<div class="container">
-    <h1>OTROS PRODUCTOS</h1>
-</div>
-<div class="container p-4 rounded shadow" style="background-color: white">
 
-    <div class="row row-cols-1 row-cols-md-3 g-4">
-        {% for p in products %}
-        <div class="col-6 col-md-4 col-lg-3 mb-4">
-            <div class="card h-100">
-                {% if p.image %}
-                <img src="{{ p.image }}" class="card-img-top" alt="{{ product.name }}" style="height: 150px" />
-                {% else %}
-                <div class="missing-image">Imagen no disponible</div>
-                {% endif %}
-                <div class="card-body text-center">
-                    <div class="row">
-                        <h5 class="card-title">{{ p.name }}</h5>
-                    </div>
-                    <div class="row">
-                        <p class="card-text description">{{ p.description }}</p>
-                        <p class="card-text price"><b> Disponible: {{ p.stock }}</b></p>
-                    </div>
-                    <div class="row">
-                        <p class="card-text price">Precio: ${{ p.price }}</p>
-                    </div>
-                </div>
-                <div class="card-footer" style="text-align: center">
-                    <a href="{% url 'product_detail' p.id %}" class="btn btn-default bg-primary-3 view-detail-btn"
-                        data-product-id="{{ p.id }}">Ver Detalle</a>
-                    <a href="{% url 'Add' p.id %}"
-                        class="btn btn-default bg-primary-3 view-detail-btn add-to-cart-btn">Agregar al Carrito</a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-</div>
 
 {% endblock %}

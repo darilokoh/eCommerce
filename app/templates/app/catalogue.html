@@ -48,7 +48,7 @@
       </div>
     </div>
 
-    <!--PRODUCTOS-->
+    <!--CARDS-->
 
     <div class="col-md-9">
       <div class="row row-cols-1 row-cols-md-3 g-4">
@@ -75,7 +75,11 @@
               </div>
             </div>
             <div class="card-footer" style="text-align: center;">
-              
+              <div class="d-flex justify-content-center mb-3">
+                <button class="btn btn-outline-secondary" onclick="decreaseQuantity(this)">-</button>
+                <input type="text" class="quantity form-control w-25 text-center mx-2" value="1" readonly>
+                <button class="btn btn-outline-secondary" onclick="increaseQuantity(this)">+</button>
+              </div>
               <a href="{% url 'Add' p.id %}"
                 class="btn btn-default bg-primary-3 view-detail-btn add-to-cart-btn">Agregar al Carrito</a>           
             </div>
@@ -86,4 +90,23 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block js %}
+<script>function decreaseQuantity(button) {
+  // Encuentra el input correspondiente al botón presionado
+  const quantityInput = button.closest('.card-footer').querySelector('.quantity');
+  let currentQuantity = parseInt(quantityInput.value);
+  if (currentQuantity > 1) {
+      quantityInput.value = currentQuantity - 1;
+  }
+}
+
+function increaseQuantity(button) {
+  // Encuentra el input correspondiente al botón presionado
+  const quantityInput = button.closest('.card-footer').querySelector('.quantity');
+  let currentQuantity = parseInt(quantityInput.value);
+  quantityInput.value = currentQuantity + 1;
+}
+</script>
 {% endblock %}

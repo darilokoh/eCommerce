@@ -137,17 +137,27 @@
           </a>
           <div class="card-body d-flex flex-column align-items-center">
             <div class="text-center">
-              <h5 class="card-title">{{ p.name | capfirst }}</h5>
+              <h5 class="card-title">{{ p.name | upper }}</h5>
             </div>
             <div class="mt-auto text-center">
               <p class="card-text price"><b> Disponible: {{ p.stock }}</b></p>
               <p class="card-text price"><b> ${{ p.price | intcomma }}</b></p>
               {% if p.stock > 0 %}
-              <a href="{% url 'Add' p.id %}" class="btn btn-default add-to-cart-btn">Agregar al Carrito</a>
+
+
+              <div class="d-flex justify-content-center mb-3">
+                <button class="btn btn-outline-secondary" onclick="decreaseQuantity(this)">-</button>
+                <input type="text" class="quantity form-control w-25 text-center mx-2" value="1" readonly>
+                <button class="btn btn-outline-secondary" onclick="increaseQuantity(this)">+</button>
+              </div>
+
+
+              <a href="{% url 'Add' p.id %}" class="btn btn-default add-to-cart-btn">COMPRAR</a>
 
               {% else %}
               <h4 class="text-center"><b>Sin Stock</b></h4>
               {% endif %}
+
             </div>
           </div>
         </div>
@@ -163,4 +173,23 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="{% static 'app/js/product_detail.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.0/lazysizes.min.js" async=""></script>
+
+<script>function decreaseQuantity(button) {
+  // Encuentra el input correspondiente al botón presionado
+  const quantityInput = button.closest('.card-body').querySelector('.quantity');
+  let currentQuantity = parseInt(quantityInput.value);
+  if (currentQuantity > 1) {
+      quantityInput.value = currentQuantity - 1;
+  }
+}
+
+function increaseQuantity(button) {
+  // Encuentra el input correspondiente al botón presionado
+  const quantityInput = button.closest('.card-body').querySelector('.quantity');
+  let currentQuantity = parseInt(quantityInput.value);
+  quantityInput.value = currentQuantity + 1;
+}
+</script>
+
+
 {% endblock %}

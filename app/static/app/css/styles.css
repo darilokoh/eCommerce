@@ -107,10 +107,232 @@ h5.noStock {
 }
 
 
-/* CARRUSEL */
+/* CARRUSEL CARRITO */
 
-.carrousel {
-  padding-top: 96px;
+/* Estilos específicos para el carrusel dentro del contenedor .custom-carousel-container */
+.custom-carousel-container {
+  width: 100%;
+  max-width: 600px; /* Puedes ajustar el tamaño según tus necesidades */
+  margin: 0 auto;
+  overflow: hidden; /* Asegura que solo se vea el contenido visible */
+}
+
+.custom-carousel-container .carousel {
+  width: 100%;
+}
+
+.custom-carousel-container .carousel-inner {
+  width: 100%;
+  overflow: hidden;
+}
+
+.custom-carousel-container .carousel-wrapper {
+  display: flex; /* Cambiamos a flex para mostrar los items horizontalmente */
+  transition: transform 0.5s ease; /* Animación suave al mover */
+}
+
+.custom-carousel-container .carousel-item {
+  width: 100%; /* Ajusta el tamaño según tus necesidades */
+  flex-shrink: 0; /* Impide que los items se reduzcan */
+  padding: 10px;
+  text-align: center;
+}
+
+.custom-carousel-container .carousel-item img {
+  width: 100%;
+  height: auto;
+}
+
+.custom-carousel-container .missing-image {
+  color: #888;
+  text-align: center;
+  font-size: 14px;
+  padding: 20px;
+  background-color: #f4f4f4;
+}
+
+/* Estilos para los controles de navegación */
+.custom-carousel-container .carousel-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.custom-carousel-container .carousel-controls button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.custom-carousel-container .carousel-controls button:hover {
+  background-color: #0056b3;
+}
+
+
+/* FOOTER */
+.site-footer
+{
+  background-color:#26272b;
+  padding:45px 0 20px;
+  font-size:15px;
+  line-height:24px;
+  color:#737373;
+}
+.site-footer hr
+{
+  border-top-color:#bbb;
+  opacity:0.5
+}
+.site-footer hr.small
+{
+  margin:20px 0
+}
+.site-footer h6
+{
+  color:#fff;
+  font-size:16px;
+  text-transform:uppercase;
+  margin-top:5px;
+  letter-spacing:2px
+}
+.site-footer a
+{
+  color:#737373;
+}
+.site-footer a:hover
+{
+  color:#3366cc;
+  text-decoration:none;
+}
+.footer-links
+{
+  padding-left:0;
+  list-style:none
+}
+.footer-links li
+{
+  display:block
+}
+.footer-links a
+{
+  color:#737373
+}
+.footer-links a:active,.footer-links a:focus,.footer-links a:hover
+{
+  color:#3366cc;
+  text-decoration:none;
+}
+.footer-links.inline li
+{
+  display:inline-block
+}
+.site-footer .social-icons
+{
+  text-align:right
+}
+.site-footer .social-icons a
+{
+  width:40px;
+  height:40px;
+  line-height:40px;
+  margin-left:6px;
+  margin-right:0;
+  border-radius:100%;
+  background-color:#33353d
+}
+.copyright-text
+{
+  margin:0
+}
+@media (max-width:991px)
+{
+  .site-footer [class^=col-]
+  {
+    margin-bottom:30px
+  }
+}
+@media (max-width:767px)
+{
+  .site-footer
+  {
+    padding-bottom:0
+  }
+  .site-footer .copyright-text,.site-footer .social-icons
+  {
+    text-align:center
+  }
+}
+.social-icons
+{
+  padding-left:0;
+  margin-bottom:0;
+  list-style:none
+}
+.social-icons li
+{
+  display:inline-block;
+  margin-bottom:4px
+}
+.social-icons li.title
+{
+  margin-right:15px;
+  text-transform:uppercase;
+  color:#96a2b2;
+  font-weight:700;
+  font-size:13px
+}
+.social-icons a{
+  background-color:#eceeef;
+  color:#818a91;
+  font-size:16px;
+  display:inline-block;
+  line-height:44px;
+  width:44px;
+  height:44px;
+  text-align:center;
+  margin-right:8px;
+  border-radius:100%;
+  -webkit-transition:all .2s linear;
+  -o-transition:all .2s linear;
+  transition:all .2s linear
+}
+.social-icons a:active,.social-icons a:focus,.social-icons a:hover
+{
+  color:#fff;
+  background-color:#29aafe
+}
+.social-icons.size-sm a
+{
+  line-height:34px;
+  height:34px;
+  width:34px;
+  font-size:14px
+}
+.social-icons a.facebook:hover
+{
+  background-color:#3b5998
+}
+.social-icons a.instagram:hover
+{
+  background-color:#E1306C
+}
+.social-icons a.whatsapp:hover
+{
+  background-color:#128c7e
+}
+
+
+@media (max-width:767px)
+{
+  .social-icons li.title
+  {
+    display:block;
+    margin-right:0;
+    font-weight:600
+  }
 }
 
 .text-overlay {

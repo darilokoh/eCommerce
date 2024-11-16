@@ -55,11 +55,9 @@ window.addEventListener("scroll", () => {
   }
 });
 
-// Agregar controlador de eventos de clic al documento
 document.addEventListener("click", (event) => {
   const target = event.target;
 
-  // Verificar si se hizo clic fuera del carrito
   if (
     isCartVisible &&
     target !== cartToggle &&
@@ -72,10 +70,78 @@ document.addEventListener("click", (event) => {
 
 function toggleCartVisibility() {
   if (!isCartVisible) {
-    cartContainer.style.display = "block";
+    cartContainer.classList.remove('hide');
+    cartContainer.classList.add('show');
     isCartVisible = true;
   } else {
-    cartContainer.style.display = "none";
+    cartContainer.classList.remove('show');
+    cartContainer.classList.add('hide');
     isCartVisible = false;
   }
 }
+
+// font-family: 'Alegreya', serif;
+// font-family: 'Alice', serif;
+// font-family: 'Arapey', serif;
+// font-family: 'Aref Ruqaa', serif;
+// font-family: 'Cantata One', serif;
+// font-family: 'Domine', serif;
+// font-family: 'Droid Serif', serif;
+// font-family: 'Gentium Basic', serif;
+// font-family: 'Libre Baskerville', serif;
+// font-family: 'Lora', serif;
+// font-family: 'Merriweather', serif;
+// font-family: 'Old Standard TT', serif;
+// font-family: 'Oranienbaum', serif;
+// font-family: 'Prata', serif;
+// font-family: 'Rufina', serif;
+// font-family: 'Vidaloka', serif;
+// font-family: 'Bentham', serif;
+// font-family: 'Saira Extra Condensed', sans-serif;
+// font-family: 'Saira', sans-serif;
+// font-family: 'Lato', sans-serif;
+// font-family: 'Open Sans', sans-serif;
+// font-family: 'Oswald', sans-serif;
+// font-family: 'Saira Condensed', sans-serif;
+// font-family: 'Titillium Web', sans-serif;
+// font-family: 'Quicksand', sans-serif;
+// font-family: 'Nunito', sans-serif;
+// font-family: 'Abel', sans-serif;
+// font-family: 'Ruluko', sans-serif;
+// font-family: 'Rum Raisin', sans-serif;
+// font-family: 'Snippet', sans-serif;
+// font-family: 'Chathura', sans-serif;
+// font-family: 'Text Me One', sans-serif;
+// font-family: 'Sansita', sans-serif;
+// font-family: 'Wire One', sans-serif;
+// font-family: 'Marvel', sans-serif;
+// font-family: 'Bubbler One', sans-serif;
+// font-family: 'Advent Pro', sans-serif;
+// font-family: 'Amaranth', sans-serif;
+// font-family: 'Convergence', sans-serif;
+
+$(document).ready(function() {
+    $('#id_region').change(function() {
+        var regionId = $(this).val();
+        var municipalitySelect = $('#id_municipality');
+
+        // Limpiar las opciones anteriores
+        municipalitySelect.empty();
+        municipalitySelect.append('<option value="">Seleccione una comuna</option>');
+
+        if (regionId) {
+            $.ajax({
+                url: "/api/municipalities/",
+                data: { 'region_id': regionId },
+                success: function(data) {
+                    $.each(data, function(index, municipality) {
+                        municipalitySelect.append('<option value="' + municipality.id + '">' + municipality.name + '</option>');
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error en la solicitud AJAX:", error);
+                }
+            });
+        }
+    });
+});

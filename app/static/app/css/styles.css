@@ -195,11 +195,9 @@ footer {
 
 .card-img,
 .card-img-top {
-  height:100%;
-}
-
-.card-title {
-  font-weight: bold;
+    /* border-top-left-radius: 1rem;
+    border-top-right-radius: 1rem; */
+    height: 200px;
 }
 
 .card-form {

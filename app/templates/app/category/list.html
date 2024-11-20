@@ -1,5 +1,7 @@
 {% extends 'app/base.html' %}
-
+{% block css %}
+<title>Conejo Furioso | Administración</title>
+{% endblock %}
 {% block js %}
 <script>
     function delete_Category(id){
@@ -33,15 +35,27 @@
     <br><br>
     <div class="card">
         <div class="card-body">
+<<<<<<< HEAD
+            <center>
+                <h2>Lista de Categorías</h2>
+            </center>
+=======
             <h2 style="text-align: center;">Lista de Categorías</h2>
+>>>>>>> dev
             <hr>
             <div class="table-responsive">
                 <table id="productTable" class="table table-striped table-hover table-responsive-sm">
                     <thead>
                         <tr>
+<<<<<<< HEAD
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Imagen</th>
+=======
                             <th scope="col">Nombre</th>
                             <th scope="col">Descripción</th>
                             <th scope="col">Imagen</th>
+>>>>>>> dev
                             {% if perms.app.change_category %}
                             <th scope="col">Modificar</th>
                             {% endif %}
@@ -68,13 +82,21 @@
 
                         {% if perms.app.change_category %}
                         <td>
+<<<<<<< HEAD
+                            <a href="{% url 'update_category' c.id %}" class="btn btn-default bg-primary-3 btn-sm">Modificar</a>
+=======
                             <button class="btn btn-default bg-primary-3" type="button" onclick="window.location.href='{% url 'update_category' c.id %}'">Modificar</button>
+>>>>>>> dev
                         </td>
                         {% endif %}
 
                         {% if perms.app.delete_category %}
                         <td>
+<<<<<<< HEAD
+                            <a href="#" onclick="delete_Category({{ c.id }})" class="btn btn-danger btn-sm" style="border-color: black; border-width: 2px;">Eliminar</a>
+=======
                             <button class="btn btn-default bg-primary-3 delete-btn" type="button" onclick="delete_Category({{ c.id }})">Eliminar</button>
+>>>>>>> dev
                         </td>
                         {% endif %}
                     </tr>

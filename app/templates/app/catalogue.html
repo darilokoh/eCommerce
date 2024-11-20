@@ -1,8 +1,13 @@
 {% extends 'app/base.html' %}
 {% load static %}
+<<<<<<< HEAD
+{% block css %}
+<title>Conejo Furioso | Catálogo</title>
+=======
 {% block title %}Catalogo | Conejo Furioso{% endblock %}
 {% block tittle_css %}
 
+>>>>>>> dev
 {% endblock %}
 
 {% block content %}
@@ -39,7 +44,11 @@
             </div>
             <button type="submit" class="btn btn-default bg-primary-3" name="filter_submit">Aplicar filtros</button>
             {% if request.GET.name or request.GET.category or request.GET.min_price_filter or request.GET.max_price_filter %}
+<<<<<<< HEAD
+            <button type="submit" class="btn btn-default bg-primary-3" name="clear_filters">Eliminar filtros</button>
+=======
             <button type="submit" class="btn btn-default bg-primary-3 add-to-cart-btn" name="clear_filters">Limpiar filtros</button>
+>>>>>>> dev
             {% endif %}
           </form>
         </div>

@@ -42,6 +42,7 @@ router.register(r'rental-order-items', RentalOrderItemViewSet)
 
 from django.urls import path
 from .views import CambiarPassword
+from app.views import generate_excel_report
 
 
 urlpatterns = [
@@ -88,4 +89,5 @@ urlpatterns = [
     path('api/token/', obtain_token, name='obtain_token'),
     path('login/', LoginView.as_view(template_name='login.html'), name='login'),
     path('api/login', login, name='login_api'),
+    path('generate-excel/', generate_excel_report, name='generate_excel'),
 ]

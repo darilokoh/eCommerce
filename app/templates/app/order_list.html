@@ -1,16 +1,15 @@
 {% extends 'app/base.html' %}
 
 {% load static %}
-
-{% block content %}
 {% load humanize %}
 
+{% block content %}
 <br><br><br>
 <div class="container my-5">
     <br><br>
     <div class="card">
         <div class="card-body">
-            <h2 style="text-align: center;">Lista de Ordenes</h2>
+            <h2 style="text-align: center;">Lista de Órdenes</h2>
             <hr>
             <div class="table-responsive">
                 <!-- Formulario de filtros -->
@@ -55,9 +54,9 @@
                     <thead>
                         <tr>
                             <th scope="col">Usuario</th>
-                            <th scope="col">Numero de orden</th>
+                            <th scope="col">Número de orden</th>
                             <th scope="col">Nombre</th>
-                            <th scope="col">Direccion</th>
+                            <th scope="col">Dirección</th>
                             <th scope="col">Celular</th>
                             <th scope="col">Total Orden</th>
                             <th scope="col">Pagado</th>
@@ -68,42 +67,15 @@
                     <tbody>
                         {% for o in entity %}
                         <tr>
-                            {% if o.user.username %}
-                            <td>{{ o.user.username }}</td>
-                            {% else %}
-                            <td>N/A</td>
-                            {% endif %}
-
+                            <td>{{ o.user.username|default:"N/A" }}</td>
                             <td>{{ o.order_id }}</td>
-
-                            {% if o.name %}
-                            <td>{{ o.name }}</td>
-                            {% else %}
-                            <td>N/A</td>
-                            {% endif %}
-
-                            {% if o.address %}
-                            <td>{{ o.address }}</td>
-                            {% else %}
-                            <td>N/A</td>
-                            {% endif %}
-
-                            {% if o.phone %}
-                            <td>{{ o.phone }}</td>
-                            {% else %}
-                            <td>N/A</td>
-                            {% endif %}
-
+                            <td>{{ o.name|default:"N/A" }}</td>
+                            <td>{{ o.address|default:"N/A" }}</td>
+                            <td>{{ o.phone|default:"N/A" }}</td>
                             <td>{{ o.accumulated | intcomma }}</td>
-
-                            {% if o.pagado %}
-                            <td>Si</td>
-                            {% else %}
-                            <td>No</td>
-                            {% endif %}
+                            <td>{% if o.pagado %}Sí{% else %}No{% endif %}</td>
 
                             <td>{{ o.fecha }}</td>
-
                             <td>
                                 <ul>
                                     {% for item in o.orderitem_set.all %}
@@ -162,18 +134,181 @@
                             {% for product in top_products %}
                             <tr>
                                 <td>{{ product.product_name }}</td>
-                                <td>{{ product.product_name }} - Cantidad vendida: {{ product.total_amount }}</td>
+                                <td>{{ product.total_amount }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
+                </div>
 
-                    <hr>
-                    <div>
-                        {% include 'app/paginator.html' %}
+                <!-- Gráfico de torta -->
+                <div class="chart-container" style="width: 50%; margin: auto;">
+                    <canvas id="topProductsChart"></canvas>
+                </div>
+                
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <script>
+                    const labels = [
+                        {% for product in top_products %}
+                            "{{ product.product_name }}",
+                        {% endfor %}
+                    ];
+
+                    const data = [
+                        {% for product in top_products %}
+                            {{ product.total_amount }},
+                        {% endfor %}
+                    ];
+
+                    const ctx = document.getElementById('topProductsChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Productos más vendidos',
+                                data: data,
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.2)',
+                                    'rgba(54, 162, 235, 0.2)',
+                                    'rgba(255, 206, 86, 0.2)',
+                                    'rgba(75, 192, 192, 0.2)',
+                                    'rgba(153, 102, 255, 0.2)',
+                                    'rgba(255, 159, 64, 0.2)'
+                                ],
+                                borderColor: [
+                                    'rgba(255, 99, 132, 1)',
+                                    'rgba(54, 162, 235, 1)',
+                                    'rgba(255, 206, 86, 1)',
+                                    'rgba(75, 192, 192, 1)',
+                                    'rgba(153, 102, 255, 1)',
+                                    'rgba(255, 159, 64, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Productos más vendidos'
+                                }
+                            }
+                        }
+                    });
+                </script>
+
+                <div class="chart-container" style="width: 60%; margin: auto;">
+                    <canvas id="userOrdersChart"></canvas>
+                </div>
+                <script>
+                    const userLabels = [
+                        {% for o in entity %}
+                            "{{ o.user.username|default:'N/A' }}",
+                        {% endfor %}
+                    ];
+
+                    const userTotals = [
+                        {% for o in entity %}
+                            {{ o.accumulated }},
+                        {% endfor %}
+                    ];
+
+                    const userCtx = document.getElementById('userOrdersChart').getContext('2d');
+                    new Chart(userCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: userLabels,
+                            datasets: [{
+                                label: 'Totales por Usuario',
+                                data: userTotals,
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false },
+                                title: { display: true, text: 'Totales por Usuario' }
+                            },
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                </script>
+
+                <div class="chart-container" style="width: 70%; margin: auto;">
+                    <canvas id="monthlySalesChart"></canvas>
+                </div>
+
+                <script>
+                    const monthLabels = {{ month_labels|safe }};
+                    const monthlyData = {{ monthly_sales|safe }};
+
+                    const monthCtx = document.getElementById('monthlySalesChart').getContext('2d');
+                    new Chart(monthCtx, {
+                        type: 'line',
+                        data: {
+                            labels: monthLabels,
+                            datasets: [{
+                                label: 'Órdenes por Mes',
+                                data: monthlyData,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { position: 'top' },
+                                title: { display: true, text: 'Órdenes por Mes' }
+                            },
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                </script>
+
+                <div class="row mt-5">
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Órdenes</h5>
+                                <p class="card-text">{{ total_orders_count }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Órdenes Pagadas</h5>
+                                <p class="card-text">{{ paid_orders_count }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Órdenes No Pagadas</h5>
+                                <p class="card-text">{{ unpaid_orders_count }}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
+                <hr>
+                <div>
+                    {% include 'app/paginator.html' %}
+                </div>
                 <br>
                 <div class="row list-buttons">
                     <div class="col">
@@ -182,9 +317,20 @@
                 </div>
             </div>
         </div>
-
     </div>
 
-    <script src="{% static 'core/js/jquery-3.6.0.js'%}"></script>
+    <button onclick="confirmDownload()" style="margin-top: 20px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Descargar Reporte en Excel
+    </button>
 
+  
+    <script>
+        function confirmDownload() {
+            const userConfirmed = confirm("¿Estás seguro de que deseas descargar el reporte en Excel?");
+            if (userConfirmed) {
+                window.location.href = "/generate-excel/";
+            }
+        }
+    </script>
+</div>
 {% endblock %}

@@ -1353,6 +1353,11 @@ def order_list(request):
         orders.filter(fecha__month=month).count() for month in range(1, 13)
     ]
 
+    # Totales por usuario (top 10 usuarios con mayores acumulados)
+    user_totals = Order.objects.values('user__username').annotate(
+        total_accumulated=Sum('accumulated')
+    ).order_by('-total_accumulated')[:10]
+
     # Paginación
     paginator = Paginator(orders, 5)
     try:
@@ -1375,8 +1380,10 @@ def order_list(request):
                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
         'paid_orders_count': paid_orders_count,
         'unpaid_orders_count': unpaid_orders_count,
+        'user_totals': user_totals,  # Añadir los totales por usuario al contexto
     }
     return render(request, 'app/order_list.html', context)
+
 
 
 @api_view(['POST'])

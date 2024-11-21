@@ -206,43 +206,46 @@
                     <canvas id="userOrdersChart"></canvas>
                 </div>
                 <script>
-                    const userLabels = [
-                        {% for o in entity %}
-                            "{{ o.user.username|default:'N/A' }}",
-                        {% endfor %}
-                    ];
-
-                    const userTotals = [
-                        {% for o in entity %}
-                            {{ o.accumulated }},
-                        {% endfor %}
-                    ];
-
-                    const userCtx = document.getElementById('userOrdersChart').getContext('2d');
-                    new Chart(userCtx, {
-                        type: 'bar',
-                        data: {
-                            labels: userLabels,
-                            datasets: [{
-                                label: 'Totales por Usuario',
-                                data: userTotals,
-                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: { display: false },
-                                title: { display: true, text: 'Totales por Usuario' }
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const userLabels = [
+                            {% for user in user_totals %}
+                                "{{ user.user__username }}",
+                            {% endfor %}
+                        ];
+                
+                        const userTotals = [
+                            {% for user in user_totals %}
+                                {{ user.total_accumulated }},
+                            {% endfor %}
+                        ];
+                
+                        const userCtx = document.getElementById('userOrdersChart').getContext('2d');
+                        new Chart(userCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: userLabels,
+                                datasets: [{
+                                    label: 'Totales por Usuario (Top 10)',
+                                    data: userTotals,
+                                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    borderWidth: 1
+                                }]
                             },
-                            scales: {
-                                y: { beginAtZero: true }
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    legend: { display: false },
+                                    title: { display: true, text: 'Totales por Usuario (Top 10)' }
+                                },
+                                scales: {
+                                    y: { beginAtZero: true }
+                                }
                             }
-                        }
+                        });
                     });
                 </script>
+                
 
                 <div class="chart-container" style="width: 70%; margin: auto;">
                     <canvas id="monthlySalesChart"></canvas>

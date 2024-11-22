@@ -78,4 +78,5 @@ urlpatterns = [
     path('api/login', login, name='login_api'),
     path("webpay/init/", webpay_init_transaction, name="webpay_init"),
     path("webpay/return/", webpay_return, name="webpay_return"),
+    path('generate-excel/', views.generate_excel_report, name='generate-excel'),
 ]

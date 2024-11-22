@@ -1340,7 +1340,9 @@ def payment_success(request):
     return render(request, 'app/checkout.html')
 
 @require_http_methods(["GET", "POST"])
+
 def order_list(request):
+    # Obtener todas las órdenes con prefetch para optimización
     orders = Order.objects.prefetch_related('orderitem_set').all()
     page = request.GET.get('page', 1)
 
@@ -1350,24 +1352,41 @@ def order_list(request):
     if start_date and end_date:
         orders = orders.filter(fecha__range=[start_date, end_date])
 
-        # Filtro por nombre de OrderItem
+    # Filtro por nombre de OrderItem
     order_item_name = request.GET.get('order_item_name')
     if order_item_name:
-        orders = orders.filter(
-            orderitem__product_name__icontains=order_item_name)
+        orders = orders.filter(orderitem__product_name__icontains=order_item_name)
 
-    total_accumulated = orders.aggregate(total_accumulated=Sum('accumulated'))[
-        'total_accumulated']
+    # Cálculos generales
+    total_orders_count = orders.count()  # Contar el total de órdenes
+        
+    total_accumulated = orders.aggregate(total_accumulated=Sum('accumulated'))['total_accumulated'] or 0
+    total_products_sold = OrderItem.objects.filter(order__in=orders).aggregate(
+        total_sold=Sum('amount')
+    )['total_sold'] or 0
 
-    # Obtener el total de productos vendidos
-    total_products_sold = OrderItem.objects.filter(
-        order__in=orders).aggregate(total_sold=Sum('amount'))['total_sold']
-
-    # Obtener los 4 productos más vendidos considerando los filtros
-    # top_products = OrderItem.objects.filter(order__in=orders).values('product_name').annotate(total_amount=Count('product_name')).order_by('-total_amount')[:4]
+    # Top productos más vendidos
     top_products = OrderItem.objects.filter(order__in=orders).values(
-        'product_name').annotate(total_amount=Sum('amount')).order_by('-total_amount')[:4]
+        'product_name'
+    ).annotate(
+        total_amount=Sum('amount')
+    ).order_by('-total_amount')[:4]
 
+    # Dividir órdenes pagadas y no pagadas
+    paid_orders_count = orders.filter(pagado=True).count()
+    unpaid_orders_count = orders.filter(pagado=False).count()
+
+    # Ventas mensuales
+    monthly_sales = [
+        orders.filter(fecha__month=month).count() for month in range(1, 13)
+    ]
+
+    # Totales por usuario (top 10 usuarios con mayores acumulados)
+    user_totals = Order.objects.values('user__username').annotate(
+        total_accumulated=Sum('accumulated')
+    ).order_by('-total_accumulated')[:10]
+
+    # Paginación
     paginator = Paginator(orders, 5)
     try:
         orders = paginator.page(page)
@@ -1376,14 +1395,22 @@ def order_list(request):
     except EmptyPage:
         orders = paginator.page(paginator.num_pages)
 
-    data = {
+    # Contexto para la plantilla
+    context = {
         'entity': orders,
         'paginator': paginator,
         'total_accumulated': total_accumulated,
+        'total_orders_count': total_orders_count,  # Incluyendo el total de órdenes
         'total_products_sold': total_products_sold,
-        'top_products': top_products
+        'top_products': top_products,
+        'monthly_sales': monthly_sales,
+        'month_labels': ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+        'paid_orders_count': paid_orders_count,
+        'unpaid_orders_count': unpaid_orders_count,
+        'user_totals': user_totals,  # Añadir los totales por usuario al contexto
     }
-    return render(request, 'app/order_list.html', data)
+    return render(request, 'app/order_list.html', context)
 
 
 @api_view(['POST'])
@@ -1558,3 +1585,216 @@ def list_municipalities(request):
     
     serializer = MunicipalitySerializer(municipalities, many=True)
     return Response(serializer.data)
+
+
+
+import openpyxl
+from openpyxl.styles import Font, Alignment
+from django.db.models import Count, Sum, F
+from django.http import HttpResponse
+
+def generate_excel_report(request):
+    # Obtener las órdenes
+    orders = Order.objects.prefetch_related('orderitem_set').all()
+
+    # Calcular totales
+    total_accumulated = orders.aggregate(total_accumulated=Sum('accumulated'))[
+        'total_accumulated']
+    total_products_sold = OrderItem.objects.aggregate(
+        total_sold=Sum('amount'))['total_sold']
+
+    # Resumen por usuario
+    users_summary = orders.values('user__username').annotate(
+        total_orders=Count('order_id'),
+        total_amount=Sum('accumulated')
+    )
+
+    # Ventas mensuales
+    months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+              'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    monthly_sales = [orders.filter(fecha__month=i).aggregate(
+        total=Sum('accumulated'))['total'] or 0 for i in range(1, 13)]
+
+    # Estadísticas globales
+    total_orders = orders.count()
+    unique_users = orders.values('user').distinct().count()
+    avg_orders_per_user = total_orders / unique_users if unique_users > 0 else 0
+
+    # Crear un archivo Excel
+    wb = openpyxl.Workbook()
+
+    # **Hoja Principal: Detalles de las Órdenes**
+    ws = wb.active
+    ws.title = "Detalles de Órdenes"
+    header_font = Font(bold=True)
+    title_font = Font(bold=True, size=12)
+    align_center = Alignment(horizontal="center", vertical="center")
+
+    # Encabezados
+    ws.append(["Usuario", "Número de Orden", "Total",
+              "Fecha", "Pagado", "Productos"])
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.alignment = align_center
+
+    # Agregar datos de las órdenes
+    for order in orders:
+        product_details = "\n".join(
+            [f"{item.product_name} (x{item.amount})" for item in order.orderitem_set.all(
+            )]
+        )
+        ws.append([
+            order.user.username if order.user else "Anónimo",
+            order.order_id,
+            order.accumulated,
+            order.fecha.strftime("%Y-%m-%d"),
+            "Sí" if order.pagado else "No",
+            product_details
+        ])
+
+    # Agregar una línea separadora
+    ws.append([])
+
+    # Título para estadísticas globales
+    ws.append(["Estadísticas Generales"])
+    ws[f"A{ws.max_row}"].font = title_font
+    ws[f"A{ws.max_row}"].alignment = align_center
+
+    ws.append(["Total de Órdenes", total_orders])
+    ws.append(["Usuarios Únicos", unique_users])
+    ws.append(["Promedio de Órdenes por Usuario",
+              round(avg_orders_per_user, 2)])
+
+    # ================================
+    # Resumen General de Órdenes
+    # ================================
+    ws.append([])
+    ws.append(["Resumen General de Órdenes"])
+    ws[f"A{ws.max_row}"].font = title_font
+    ws[f"A{ws.max_row}"].alignment = align_center
+
+    ws.append(["Total Órdenes", "Órdenes Pagadas",
+              "Órdenes No Pagadas", "Total Acumulado"])
+
+    paid_orders = Order.objects.filter(pagado=True).count()
+    unpaid_orders = Order.objects.filter(pagado=False).count()
+    total_accumulated = Order.objects.aggregate(
+        total=Sum('accumulated'))['total'] or 0
+    ws.append([total_orders, paid_orders, unpaid_orders, total_accumulated])
+
+    # ================================
+    # Top Productos Más Vendidos
+    # ================================
+    ws.append([])
+    ws.append(["Top Productos Más Vendidos"])
+    ws[f"A{ws.max_row}"].font = title_font
+    ws[f"A{ws.max_row}"].alignment = align_center
+
+    ws.append(["Producto", "Cantidad Vendida"])
+    top_products = OrderItem.objects.values('product_name').annotate(
+        total_sold=Sum('amount')
+    ).order_by('-total_sold')[:10]
+    for product in top_products:
+        ws.append([product['product_name'], product['total_sold']])
+
+    # ================================
+    # Top Clientes
+    # ================================
+    ws.append([])
+    ws.append(["Top Clientes"])
+    ws[f"A{ws.max_row}"].font = title_font
+    ws[f"A{ws.max_row}"].alignment = align_center
+
+    ws.append(["Usuario", "Total Órdenes", "Monto Acumulado"])
+    top_clients = Order.objects.values('user__username').annotate(
+        total_orders=Count('user_id'),
+        total_accumulated=Sum('accumulated')
+    ).order_by('-total_accumulated')[:10]
+    for client in top_clients:
+        ws.append([client['user__username'], client['total_orders'],
+                  client['total_accumulated']])
+
+    # ================================
+    # Contactos por Estado
+    # ================================
+    ws.append([])
+    ws.append(["Contactos por Estado"])
+    ws[f"A{ws.max_row}"].font = title_font
+    ws[f"A{ws.max_row}"].alignment = align_center
+
+    ws.append(["Estado", "Cantidad"])
+    contact_status_summary = Contact.objects.values('status').annotate(
+        total=Count('id')
+    )
+    for status in contact_status_summary:
+        ws.append([status['status'], status['total']])
+
+    # ================================
+    # Contactos por Tipo de Consulta
+    # ================================
+    ws.append([])
+    ws.append(["Contactos por Tipo de Consulta"])
+    ws[f"A{ws.max_row}"].font = title_font
+    ws[f"A{ws.max_row}"].alignment = align_center
+
+    ws.append(["Tipo de Consulta", "Cantidad"])
+    contact_type_summary = Contact.objects.values('query_type__name').annotate(
+        total=Count('id')
+    )
+    for query_type in contact_type_summary:
+        ws.append([query_type['query_type__name'], query_type['total']])
+
+    # ================================
+    # Resumen de Rentas
+    # ================================
+    ws.append([])
+    ws.append(["Resumen de Rentas"])
+    ws[f"A{ws.max_row}"].font = title_font
+    ws[f"A{ws.max_row}"].alignment = align_center
+
+    ws.append(["Total Rentas", "Ingresos Totales"])
+    total_rentals = RentalOrder.objects.count()
+    total_rental_income = RentalOrderItem.objects.aggregate(
+        total_income=Sum(F('product_price') * F('amount'))
+    )['total_income'] or 0
+    ws.append([total_rentals, total_rental_income])
+
+    # ================================
+    # Productos Más Rentados
+    # ================================
+    ws.append([])
+    ws.append(["Productos Más Rentados"])
+    ws[f"A{ws.max_row}"].font = title_font
+    ws[f"A{ws.max_row}"].alignment = align_center
+
+    ws.append(["Producto", "Cantidad Rentada"])
+    top_rented_products = RentalOrderItem.objects.values('product_name').annotate(
+        total_rented=Sum('amount')
+    ).order_by('-total_rented')[:10]
+    for product in top_rented_products:
+        ws.append([product['product_name'], product['total_rented']])
+
+    # Ajustar ancho de columnas automáticamente
+    for sheet in wb.sheetnames:
+        ws = wb[sheet]
+        for column in ws.columns:
+            max_length = 0
+            # Obtener la letra de la columna
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except:
+                    pass
+            ws.column_dimensions[column_letter].width = max_length + 2
+
+    # Preparar la respuesta HTTP
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = 'attachment; filename="reporte_ordenes.xlsx"'
+
+    # Guardar el archivo Excel en la respuesta
+    wb.save(response)
+    return response

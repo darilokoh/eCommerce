@@ -151,28 +151,7 @@
                 <div class="container rounded shadow p-4" style="background-color: white;">
                   <h3>Aún no has agregado productos, ¿Se te antoja algo? &#x1F60B;&#x1F37B;</h3> <!--emojis-->
                   <hr>
-                  <h4>Seguro que alguno de nuestros productos te gustará</h4>
-
-                  <!-- CARRUSEL DE PRODUCTOS -->
-                  <div class="custom-carrousel-container">
-                    <div class="carousel">
-                      <div class="carousel-inner">
-                        <div class="carousel-wrapper">
-                          {% for p in products %}
-                          <div class="carousel-item">
-                            <a href="{% url 'product_detail' p.id %}" class="card-link">
-                              {% if p.image %}
-                              <img src="{{ p.image }}" class="d-block w-100" alt="{{ p.name }}">
-                              {% else %}
-                              <div class="missing-image">Imagen no disponible</div>
-                              {% endif %}
-                            </a>
-                          </div>
-                          {% endfor %}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <a href="{% url 'catalogue' %}" class="btn shadow">Ver Catálogo</a>
 
                 </div>
               </td>

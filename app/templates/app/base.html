@@ -124,8 +124,6 @@
               <h2 style="text-align: center; justify-content: center;" class="my-2">Carrito</h2>
               <br>
             </tr>
-            {% if request.session.cart.items %}
-            {% for key, value in request.session.cart.items %}
             <tr>
               <th scope="col">Nombre</th>
               <th scope="col">Precio</th>
@@ -134,7 +132,8 @@
             </tr>
           </thead>
           <tbody>
-
+            {% if request.session.cart.items %}
+            {% for key, value in request.session.cart.items %}
             <tr>
               <td><strong>{{value.product_name}}</strong></td>
               <td>{{value.product_price}}</td>

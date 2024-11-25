@@ -856,3 +856,11 @@ label.required::after {
   margin-left: 12px; /* Añade un pequeño espacio entre el ícono y el texto */
   line-height: 1.2; /* Ajusta el interlineado para que el texto no ocupe demasiado espacio vertical */
 }
+
+/* CONTAINER DASHBOARD */
+.chart-container {
+  width: 100%; /* Se adapta al ancho del padre */
+  max-width: 500px; /* Limita el tamaño si es necesario */
+  height: 300px; /* Ajusta la altura según lo necesario */
+  margin: auto; /* Centra el gráfico dentro de su columna */
+}

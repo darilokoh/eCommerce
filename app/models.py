@@ -21,16 +21,20 @@ class Category(models.Model):
 
 #producto
 class Product(models.Model):
-    name = models.CharField(max_length=50)
-    price = models.IntegerField()
-    description = models.TextField(max_length=200)
-    is_new = models.BooleanField(default=True)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
-    stock = models.IntegerField()
-    is_featured = models.BooleanField(default=False)
-    image = models.ImageField(upload_to='products/', blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_rentable = models.BooleanField(default=False)
+    name = models.CharField(max_length=50, verbose_name="Nombre")
+    price = models.IntegerField(verbose_name="Precio")
+    description = models.TextField(max_length=200, verbose_name="Descripción")
+    is_new = models.BooleanField(default=True, verbose_name="¿Nuevo?")
+    category = models.ForeignKey(
+        Category, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Categoría"
+    )
+    stock = models.IntegerField(verbose_name="Unidades")
+    is_featured = models.BooleanField(default=False, verbose_name="¿Destacado?")
+    image = models.ImageField(
+        upload_to='products/', blank=True, null=True, verbose_name="Imagen"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de creación")
+    is_rentable = models.BooleanField(default=False, verbose_name="¿Arrendable?")
 
     def __str__(self):
         return self.name
@@ -72,31 +76,50 @@ class Tokens(models.Model):
     token= models.CharField(max_length=256)
     user = models.CharField(max_length=256)    
 
+# Región
+class Region(models.Model):  
+    code = models.CharField(max_length=10)
+    name = models.CharField(max_length=100)
+    short_name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+# Comuna
+class Municipality(models.Model):  
+    name = models.CharField(max_length=100)
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name="municipalities")
+
+    def __str__(self):
+        return self.name
+
+# Orden de compra
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     order_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, null=True)
     email = models.EmailField(null=True, blank=True)
-    region = models.CharField(max_length=100, null=True, blank=True)
-    municipality = models.CharField(max_length=100, null=True, blank=True)
+    region = models.ForeignKey(Region, on_delete=models.SET_NULL, null=True, blank=True)
+    municipality = models.ForeignKey(Municipality, on_delete=models.SET_NULL, null=True, blank=True)
     address = models.CharField(max_length=100, null=True)
     phone = models.CharField(max_length=9, null=True)
     accumulated = models.DecimalField(max_digits=10, decimal_places=2)
     pagado = models.BooleanField(default=False)
-    fecha = models.DateField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de creación")
 
     def __str__(self):
         return f"Order {self.order_id} - User: {self.user.username if self.user else 'None'}"
     
+# Items de orden de compra
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    product_name = models.CharField(max_length=100)
-    product_price = models.DecimalField(max_digits=10, decimal_places=2)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, null=True, blank=True, verbose_name="Producto")
     amount = models.IntegerField()
 
     def __str__(self):
-        return f"{self.product_name} - Amount: {self.amount}"  
-    
+        return f"{self.product_name} - Amount: {self.amount}"
+
+# Orden de renta    
 class RentalOrder(models.Model):
     rut = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
@@ -109,6 +132,7 @@ class RentalOrder(models.Model):
     def __str__(self):
         return self.name
     
+# Items de orden de renta
 class RentalOrderItem(models.Model):
     rental_order = models.ForeignKey(RentalOrder, on_delete=models.CASCADE, related_name='items')
     product_name = models.CharField(max_length=100)
@@ -117,18 +141,3 @@ class RentalOrderItem(models.Model):
 
     def __str__(self):
         return f"{self.product_name} - Amount: {self.amount}"
-
-class Region(models.Model):  # Región
-    code = models.CharField(max_length=10)
-    name = models.CharField(max_length=100)
-    short_name = models.CharField(max_length=100)
-
-    def __str__(self):
-        return self.name
-
-class Municipality(models.Model):  # Comuna
-    name = models.CharField(max_length=100)
-    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name="municipalities")
-
-    def __str__(self):
-        return self.name

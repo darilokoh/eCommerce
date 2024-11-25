@@ -68,11 +68,7 @@
                     <tbody>
                         {% for o in entity %}
                         <tr>
-                            {% if o.user.username %}
-                            <td>{{ o.user.username }}</td>
-                            {% else %}
-                            <td>N/A</td>
-                            {% endif %}
+                            <td>{{ o.user_username|default:"N/A" }}</td>
 
                             <td>{{ o.order_id }}</td>
 
@@ -102,11 +98,11 @@
                             <td>No</td>
                             {% endif %}
 
-                            <td>{{ o.fecha }}</td>
+                            <td>{{ o.created_at }}</td>
 
                             <td>
                                 <ul>
-                                    {% for item in o.orderitem_set.all %}
+                                    {% for item in o.items %}
                                     <li>{{ item.product_name }} - Cantidad: {{ item.amount }}</li>
                                     {% endfor %}
                                 </ul>
@@ -161,8 +157,8 @@
                         <tbody>
                             {% for product in top_products %}
                             <tr>
-                                <td>{{ product.product_name }}</td>
-                                <td>{{ product.product_name }} - Cantidad vendida: {{ product.total_amount }}</td>
+                                <td>{{ product.product__name }}</td>
+                                <td>{{ product.total_amount }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -184,7 +180,5 @@
         </div>
 
     </div>
-
-    <script src="{% static 'core/js/jquery-3.6.0.js'%}"></script>
 
 {% endblock %}

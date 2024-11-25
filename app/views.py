@@ -7,7 +7,8 @@ from .models import Product, Category, Contact, QueryType, RentalOrder, RentalOr
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import Http404, HttpResponse, JsonResponse, HttpRequest
 from rest_framework import viewsets, serializers
-from .serializers import ProductSerializer, CategorySerializer, ContactSerializer, QueryTypeSerializer, RentalOrderSerializer, RentalOrderItemSerializer, LoginSerializer, RegionSerializer, MunicipalitySerializer
+from .serializers import ProductSerializer, CategorySerializer, ContactSerializer, QueryTypeSerializer, RentalOrderSerializer,\
+      RentalOrderItemSerializer, LoginSerializer, RegionSerializer, MunicipalitySerializer, OrderSerializer, OrderItemSerializer
 import requests
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
 from app.cart import Cart
@@ -17,7 +18,7 @@ from django.db.models import Sum, Q
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, action
 from django.middleware.csrf import get_token
 from django.views.decorators.http import require_http_methods
 from .serializers import TokenSerializer
@@ -36,9 +37,10 @@ from transbank.webpay.webpay_plus.transaction import Transaction, WebpayOptions
 from transbank.common.integration_type import IntegrationType
 
 # API HELPERS
-from .api_helpers import LocationAPI, ProductAPI
+from .api_helpers import LocationAPI, CategoryAPI, ProductAPI, RentalOrderAPI, RentalOrderItemAPI, ContactAPI, QueryTypeAPI, OrderAPI, OrderItemAPI
 
 from django.utils.crypto import get_random_string
+from django.contrib.auth import update_session_auth_hash
 tok = None
 
 
@@ -49,12 +51,9 @@ def is_admin(user):
     return user.groups.filter(name='admin').exists()
 
 # VIEWSETS PARA APIS
-
-
 class CategoryViewset(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-
 
 class ProductViewset(viewsets.ModelViewSet):
     queryset = Product.objects.all()
@@ -72,7 +71,7 @@ class ProductViewset(viewsets.ModelViewSet):
         is_rentable = self.request.GET.get('is_rentable')
 
         if name:
-            products = products.filter(name__contains=name)
+            products = products.filter(name__icontains=name)
         if category:
             products = products.filter(category=category)
         if min_price and max_price:
@@ -87,9 +86,12 @@ class ProductViewset(viewsets.ModelViewSet):
             products = products.filter(is_featured=True)
         if is_new:
             products = products.filter(is_new=True)
-        # filtro para rentable
-        if is_rentable:
-            products = products.filter(is_rentable=True)
+        # Filtro para rentable
+        if is_rentable is not None:
+            if is_rentable.lower() == 'true':
+                products = products.filter(is_rentable=True)
+            elif is_rentable.lower() == 'false':
+                products = products.filter(is_rentable=False)
 
         return products
 
@@ -102,7 +104,6 @@ class ProductViewset(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save()
-    from django.contrib.auth import update_session_auth_hash
 
 @require_http_methods(["GET", "POST"])
 @login_required
@@ -143,6 +144,11 @@ class ContactViewSet(viewsets.ModelViewSet):
             # Filtrar los contactos por ID del tipo de consulta
             queryset = queryset.filter(query_type_id=query_type_id)
 
+        # Filtro por nombre del tipo de consulta (query_type_name)
+        query_type_name = self.request.query_params.get('query_type_name', None)
+        if query_type_name:
+            queryset = queryset.filter(query_type__name__iexact=query_type_name)
+
         return queryset
 
     def partial_update(self, request, *args, **kwargs):
@@ -157,7 +163,6 @@ class QueryTypeViewset(viewsets.ModelViewSet):
     queryset = QueryType.objects.all()
     serializer_class = QueryTypeSerializer
 
-
 class RentalOrderViewSet(viewsets.ModelViewSet):
     # def list(self, request):
     #     rental_orders = RentalOrder.objects.all()
@@ -165,7 +170,6 @@ class RentalOrderViewSet(viewsets.ModelViewSet):
     #     return Response(serializer.data)
     queryset = RentalOrder.objects.all()
     serializer_class = RentalOrderSerializer
-
 
 class RentalOrderItemViewSet(viewsets.ModelViewSet):
     queryset = RentalOrderItem.objects.all()
@@ -184,26 +188,73 @@ class MunicipalityViewSet(viewsets.ReadOnlyModelViewSet):  # Solo lectura
             return Municipality.objects.filter(region_id=region_id)
         return Municipality.objects.all()
 
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.prefetch_related('items').all()
+    serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # Filtro por rango de fechas
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        if start_date and end_date:
+            queryset = queryset.filter(created_at__range=[start_date, end_date])
+
+        # Filtro por nombre de OrderItem
+        order_item_name = self.request.query_params.get('order_item_name')
+        if order_item_name:
+            queryset = queryset.filter(items__product__name__icontains=order_item_name)
+
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        queryset = self.get_queryset()
+
+        # Total acumulado
+        total_accumulated = queryset.aggregate(total_accumulated=Sum('accumulated'))['total_accumulated']
+
+        # Total de productos vendidos
+        total_products_sold = OrderItem.objects.filter(order__in=queryset).aggregate(total_sold=Sum('amount'))['total_sold']
+
+        # Productos más vendidos
+        top_products = (
+            OrderItem.objects.filter(order__in=queryset)
+            .values('product__name')
+            .annotate(total_amount=Sum('amount'))
+            .order_by('-total_amount')[:4]
+        )
+
+        return Response({
+            'total_accumulated': total_accumulated,
+            'total_products_sold': total_products_sold,
+            'top_products': top_products,
+        })
+
+class OrderItemViewSet(viewsets.ModelViewSet):
+    queryset = OrderItem.objects.all()
+    serializer_class = OrderItemSerializer
+
 # VISTAS INICIALES
 @require_http_methods(["GET"])
 def home(request):
-    # Definimos los parámetros para filtrar productos
+    # Parámetros para filtrar productos
     params = {
         'is_new__in': 'true,false',
         'is_featured__in': 'true,false',
+        'is_rentable': 'false',  # Filtrar solo productos no arrendables
     }
-    # Obtenemos los productos desde la API aplicando los filtros
-    product_response = requests.get(
-        settings.API_BASE_URL + 'product/', params=params).json()
-    # Filtrar los productos para excluir los que tienen is_rentable=True
-    filtered_products = [
-        product for product in product_response if not product['is_rentable']]
 
-    categories_response = requests.get(
-        settings.API_BASE_URL + 'category/').json()
+    # Obtener los productos desde el helper
+    product_response = ProductAPI.list_products(params)
 
+    # Obtener categorías desde el helper
+    categories_response = CategoryAPI.get_categories()
+
+    # Preparar datos para la plantilla
     data = {
-        'products': filtered_products,
+        'products': product_response,
         'categories': categories_response
     }
 
@@ -212,7 +263,7 @@ def home(request):
 @require_http_methods(["GET", "POST"])
 @api_view(['GET', 'POST'])
 def catalogue(request):
-    # Obtenemos los filtros desde el html
+    # Obtenemos los filtros desde el request
     name_filter = request.GET.get('name', '')
     category_filter = request.GET.get('category', '')
     min_price_filter = request.GET.get('min_price_filter', '')
@@ -224,38 +275,33 @@ def catalogue(request):
         'category': category_filter,
         'min_price_filter': min_price_filter,
         'max_price_filter': max_price_filter,
+        'is_rentable': 'false',  # Siempre excluir productos arrendables
     }
 
-    # Obtenemos los productos desde la API aplicando los filtros
-    response = requests.get(settings.API_BASE_URL + 'product/', params=params)
-    products = response.json()
-    # Filtrar los productos para excluir los que tienen is_rentable=True
-    filtered_products = [
-        product for product in products if not product['is_rentable']]
-
-    # Obtenemos las categorías desde la API
-    categories = requests.get(settings.API_BASE_URL + 'category/').json()
-
-    # Para limpiar los filtros
+    # Verificar si se solicita limpiar filtros
     if 'clear_filters' in request.GET:
-        response = requests.get(settings.API_BASE_URL + 'product/').json()
-        products = response
+        params = {'is_rentable': 'false'}  # Solo aplica el filtro de no arrendables
 
+    # Obtenemos los productos desde el helper
+    products = ProductAPI.list_products(params=params)
+
+    # Excluir categorías con id = 3 y 5 al obtenerlas desde el helper
+    categories = CategoryAPI.get_categories(exclude_ids=[3, 5])
+
+    # Preparar datos para la plantilla
     data = {
-        'products': filtered_products,
+        'products': products,
         'categories': categories,
     }
 
     return render(request, 'app/catalogue.html', data)
 
-@api_view(['GET','POST']) 
+@api_view(['GET', 'POST'])
 def rental_service(request):
     if request.method == 'POST':
         form = RentalOrderForm(request.POST)
         if form.is_valid():
-            # Obtener el objeto datetime del formulario
             deliver_date = form.cleaned_data['deliver_date']
-            # Convertir el objeto datetime a una cadena de texto en formato ISO 8601
             deliver_date_iso = deliver_date.strftime('%Y-%m-%dT%H:%M')
 
             rental_order_data = {
@@ -264,111 +310,74 @@ def rental_service(request):
                 'address': form.cleaned_data['address'],
                 'email': form.cleaned_data['email'],
                 'phone': form.cleaned_data['phone'],
-                # Utilizar la cadena de texto en lugar del objeto datetime
                 'deliver_date': deliver_date_iso,
             }
-            # validacion para verificar que el mismo rut no haya generado una solicitud de arriendo en los ultimos 15 minutos
-            existing_order = RentalOrder.objects.filter(
-                Q(rut=rental_order_data['rut']) &
-                Q(created_at__gte=timezone.now() - timedelta(minutes=15))
-            ).exists()
 
-            if existing_order:
+            # Validar duplicados a través del helper
+            is_duplicate = RentalOrderAPI.check_duplicate_order(rental_order_data['rut'])
+            if is_duplicate:
                 return JsonResponse({'error': 'Ya existe una orden de renta con los mismos datos'})
-            else:
-                try:
-                    # Crear la orden a través de la API
-                    rental_order_response = requests.post(
-                        settings.API_BASE_URL + 'rental-orders/', json=rental_order_data)
-                    if rental_order_response.status_code == 201:
-                        rental_order = rental_order_response.json()
-                        # Obtener el ID de la orden de renta creada
-                        rental_order_id = rental_order['id']
 
-                        # Obtener la lista de productos seleccionados y sus cantidades
-                        products_selected = request.POST.getlist('products')
-                        quantities = [int(request.POST.get(
-                            f'quantity_{product_id}', 1)) for product_id in products_selected]
+            # Crear la orden de renta usando la API
+            rental_order = RentalOrderAPI.create_rental_order(rental_order_data)
+            if rental_order:
+                rental_order_id = rental_order['id']
 
-                        # Obtener la lista completa de productos utilizando los ID de los productos seleccionados
-                        products = Product.objects.filter(
-                            id__in=products_selected)
+                # Obtener productos seleccionados y cantidades
+                products_selected = request.POST.getlist('products')
+                quantities = [
+                    int(request.POST.get(f'quantity_{product_id}', 1)) for product_id in products_selected
+                ]
 
-                        rental_order_items = []
-                        for product_id, quantity in zip(products_selected, quantities):
-                            # Obtener el producto de la base de datos
-                            product = Product.objects.get(id=product_id)
-                            rental_order_item = RentalOrderItem(
-                                rental_order=RentalOrder.objects.get(
-                                    id=rental_order_id),
-                                product_name=product.name,
-                                product_price=product.price,
-                                amount=quantity
-                            )
-                            rental_order_items.append(rental_order_item)
+                # Obtener los detalles de los productos desde la API
+                products = ProductAPI.get_products_by_ids(products_selected)
 
-                        # Especificar un tamaño de lote adecuado
-                        RentalOrderItem.objects.bulk_create(
-                            rental_order_items, batch_size=100)
+                # Crear los RentalOrderItems en la API
+                items_created = RentalOrderItemAPI.bulk_create_rental_order_items(
+                    rental_order_id, products_selected, quantities
+                )
+                if items_created:
+                    # Procesar información para el correo
+                    product_names = [product['name'] for product in products]
+                    total_price = sum(
+                        product['price'] * quantity for product, quantity in zip(products, quantities)
+                    )
 
-                        # Obtener los nombres de los productos y calcular el precio total
-                        product_names = [product.name for product in products]
-                        total_price = sum(
-                            product.price * quantity for product, quantity in zip(products, quantities))
+                    email_subject = 'Confirmación de orden de renta'
+                    email_body = f'Se ha creado una nueva orden de renta con los siguientes detalles:\n\n' \
+                                 f'RUT: {rental_order_data["rut"]}\n' \
+                                 f'Nombre: {rental_order_data["name"]}\n' \
+                                 f'Dirección: {rental_order_data["address"]}\n' \
+                                 f'Correo electrónico: {rental_order_data["email"]}\n' \
+                                 f'Teléfono: {rental_order_data["phone"]}\n' \
+                                 f'Fecha de entrega: {rental_order_data["deliver_date"]}\n\n' \
+                                 f'Productos:\n'
+                    for name, quantity, product in zip(product_names, quantities, products):
+                        email_body += f'- {name}: {quantity}\nPrecio: {product["price"]}\n'
+                    email_body += f'Total de la orden: {total_price}\n\n' \
+                                  f'Gracias por su solicitud.'
 
-                        # Enviar correo electrónico con la información del RentalOrder
-                        email_subject = 'Confirmación de orden de renta'
-                        email_body = f'Se ha creado una nueva orden de renta con los siguientes detalles:\n\n' \
-                                     f'RUT: {rental_order_data["rut"]}\n' \
-                                     f'Nombre: {rental_order_data["name"]}\n' \
-                                     f'Dirección: {rental_order_data["address"]}\n' \
-                                     f'Correo electrónico: {rental_order_data["email"]}\n' \
-                                     f'Teléfono: {rental_order_data["phone"]}\n' \
-                                     f'Fecha de entrega: {rental_order_data["deliver_date"]}\n\n' \
-                                     f'Productos:\n'
-                        for name, quantity, product in zip(product_names, quantities, products):
-                            email_body += f'- {name}: {quantity}\nprecio: {product.price}\n'
-                        email_body += f'Total de la orden: {total_price}\n\n' \
-                                      f'Gracias por su solicitud.'
+                    send_mail(email_subject, email_body, settings.EMAIL_HOST_USER, [rental_order_data['email']])
 
-                        sender_email = settings.EMAIL_HOST_USER
-                        receiver_email = rental_order_data['email']
+                    return JsonResponse({'message': 'La solicitud de arriendo ha sido enviada correctamente, recibirás un correo con la información'})
+                else:
+                    return JsonResponse({'error': 'Error al crear los items de la orden de renta'})
 
-                        send_mail(email_subject, email_body,
-                                  sender_email, [receiver_email])
+        return JsonResponse({'error': 'Error en los datos del formulario'})
 
-                        return JsonResponse({'message': 'La solicitud de arriendo ha sido enviada correctamente, recibiras un correo con la información'})
-                    else:
-                        return JsonResponse({'error': 'Error al enviar la solicitud'})
-
-                except Exception as e:
-                    print(f"Error en el servidor: {str(e)}")
-                    return JsonResponse({'error': 'Error en el servidor'})
-
-        else:
-            return JsonResponse({'error': 'Error en los datos del formulario'})
-
-    else:
-        form = RentalOrderForm()
-
-    # Definimos los parámetros para filtrar productos
-    params = {
-        'is_rentable': 'true',
-    }
-
-    # Obtenemos los productos desde la API aplicando los filtros
-    product_response = requests.get(
-        settings.API_BASE_URL + 'product/', params=params).json()
+    # Método GET
+    form = RentalOrderForm()
+    params = {'is_rentable': 'true'}
+    product_response = ProductAPI.list_products(params=params)
 
     data = {
         'form': form,
         'products': product_response,
         'csrf_token': get_token(request)
     }
-
     return render(request, 'app/rental_service.html', data)
 
-# CONTATO
+# CONTACTO
 @api_view(['GET','POST'])
 def contact(request):
     data = {
@@ -381,11 +390,13 @@ def contact(request):
 def update_contact_status(request, contact_id):
     if request.method == 'POST':
         status = request.POST.get('status')
-        data = {
-            'status': status
-        }
-        response = requests.patch(
-            settings.API_BASE_URL + f'contact/{contact_id}/', data=data)
+        if not status:
+            return JsonResponse({'error': 'El estado es requerido'}, status=400)
+
+        # Llamar al helper para actualizar el estado
+        updated_contact = ContactAPI.update_contact_status(contact_id, status)
+        if not updated_contact:
+            return JsonResponse({'error': 'Error al actualizar el contacto'}, status=500)
 
     return redirect('list_contact')
 
@@ -395,29 +406,22 @@ def list_contact(request):
     status = request.GET.get('status', '')
     query_type = request.GET.get('query_type', '')
 
-    response_query_types = requests.get(settings.API_BASE_URL + 'query-type/')
-    query_types = response_query_types.json()
+    # Obtener los tipos de consulta desde QueryTypeAPI
+    query_types = QueryTypeAPI.list_query_types()
 
-    params = {}
+    # Definir filtros para los contactos
+    filters = {}
     if status and status != 'Todos':
-        params['status'] = status
+        filters['status'] = status
     if query_type and query_type != 'Todos':
-        params['query_type'] = query_type
+        filters['query_type_name'] = query_type  # Cambiar a query_type_name para filtrar por API
 
-    response = requests.get(settings.API_BASE_URL + 'contact/', params=params)
-    if response.status_code == 200:
-        contacts = response.json()
-    else:
-        contacts = []
+    # Obtener los contactos desde ContactAPI
+    contacts = ContactAPI.list_contacts(filters=filters)
 
-    # Filtrar los contactos localmente en función del tipo de contacto seleccionado
-    if query_type and query_type != 'Todos':
-        contacts = [
-            contact for contact in contacts if contact['query_type_name'] == query_type]
-
+    # Paginación
     paginator = Paginator(contacts, 5)
     page = request.GET.get('page')
-
     try:
         contacts = paginator.page(page)
     except PageNotAnInteger:
@@ -436,17 +440,7 @@ def list_contact(request):
     return render(request, 'app/contact/list.html', data)
 
 # VISTAS DE QUERYTYPE
-
-def get_object_query_type(id):
-    response = requests.get(settings.API_BASE_URL + f'query-type/{id}/')
-
-    if response.status_code == 200:
-        query_type_data = response.json()
-        return query_type_data
-    else:
-        print(f'Error al obtener el tipo de consulta: {response.content}')
-        return None
-
+@user_passes_test(is_admin)
 @require_http_methods(["GET", "POST"])
 def add_query_type(request):
     if request.method == 'POST':
@@ -454,15 +448,17 @@ def add_query_type(request):
         if form.is_valid():
             error_message = None  # Inicializamos la variable error_message
             try:
-                serializer = QueryTypeSerializer(data=form.cleaned_data)
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
+                # Usar el helper para crear el QueryType
+                data = form.cleaned_data
+                QueryTypeAPI.create_query_type(data)
+                
+                # Si se crea exitosamente, redirigir
                 messages.success(
-                    request, 'Tipo de consulta agregada exitosamente.')
+                    request, 'Tipo de consulta agregado exitosamente.')
                 return redirect('list_query_type')
             except serializers.ValidationError as e:
-                # Agregar mensaje de error al campo 'name'
-                form.add_error('name', e.detail['name'][0])
+                # Manejar errores del helper
+                form.add_error('name', e.detail.get('name', ['Error desconocido'])[0])
         else:
             error_message = "Error en los datos del formulario"
         data = {
@@ -479,16 +475,22 @@ def add_query_type(request):
 @user_passes_test(is_admin)
 @require_http_methods(["GET"])
 def list_query_type(request):
-    response = requests.get(settings.API_BASE_URL + 'query-type/')
-    query_types = response.json()
-    page = request.GET.get('page', 1)
+    # Obtener los tipos de consulta desde el helper
+    query_types = QueryTypeAPI.list_query_types()
+    
+    if not query_types:  # Manejar el caso de error al obtener los datos
+        messages.error(request, "Error al cargar los tipos de consulta.")
+        query_types = []
 
+    # Manejo de paginación
+    page = request.GET.get('page', 1)
     try:
         paginator = Paginator(query_types, 5)
         query_types = paginator.page(page)
     except:
         raise Http404
 
+    # Preparar datos para la plantilla
     data = {
         'entity': query_types,
         'paginator': paginator
@@ -497,7 +499,7 @@ def list_query_type(request):
 
 @require_http_methods(["GET", "POST"])
 def update_query_type(request, id):
-    querytype_data = get_object_query_type(id)
+    querytype_data = QueryTypeAPI.get_object_query_type(id)
 
     if querytype_data:
         error_message = ""
@@ -507,53 +509,20 @@ def update_query_type(request, id):
 
             if form.is_valid():
                 name = form.cleaned_data['name']
+                description = form.cleaned_data['description']
 
-                # Verificar si existe una categoría con el mismo nombre a través de la API
-                response = requests.get(
-                    settings.API_BASE_URL + f'query-type/?name={name}')
-
-                if response.status_code == 200:
-                    existing_querytype = response.json()
-
-                    if existing_querytype:
-                        # Verificar si alguna categoría tiene un nombre diferente al nombre actual
-                        for existing_querytype in existing_querytype:
-                            if existing_querytype['name'] == name and existing_querytype['id'] != int(id):
-                                form.add_error(
-                                    'name', 'Este tipo de consulta ya existe')
-                                error_message = "Este tipo de consulta ya existe"
-                                print(
-                                    "existing_querytype['name']: ", existing_querytype['name'])
-                                print("name: ", name)
-                                break  # Salir del bucle si se encuentra una categoría existente
-
-                    if not error_message:
-                        description = form.cleaned_data['description']
-
-                        # Crear un nuevo diccionario con los datos actualizados
-                        updated_data = {
-                            'name': name,
-                            'description': description
-                        }
-
-                        # Actualizar la categoría a través de la API
-                        update_url = settings.API_BASE_URL + \
-                            f'query-type/{id}/'
-                        response = requests.put(update_url, data=updated_data)
-
-                        if response.status_code == 200:
-                            print('Tipo de consulta actualizado exitosamente')
-                            messages.success(
-                                request, "Modificado correctamente")
-                            return redirect(to="list_query_type")
-                        else:
-                            print(
-                                f'Error al actualizar el tipo de consulta: {response.content}')
-                            error_message = "Error al actualizar el tipo de consulta a través de la API"
+                # Verificar duplicados a través del helper
+                if QueryTypeAPI.check_duplicate_query_type(name, exclude_id=int(id)):
+                    form.add_error('name', 'Este tipo de consulta ya existe')
+                    error_message = "Este tipo de consulta ya existe"
                 else:
-                    print(
-                        f'Error al verificar la existencia de el tipo de consulta: {response.content}')
-                    error_message = "Error al verificar la existencia de el tipo de consulta a través de la API"
+                    # Actualizar el tipo de consulta
+                    updated_data = {'name': name, 'description': description}
+                    if QueryTypeAPI.update_query_type(id, updated_data):
+                        messages.success(request, "Modificado correctamente")
+                        return redirect(to="list_query_type")
+                    else:
+                        error_message = "Error al actualizar el tipo de consulta a través de la API"
             else:
                 error_message = "Error en los datos del formulario"
         else:
@@ -564,141 +533,75 @@ def update_query_type(request, id):
             'form': form,
             'error_message': error_message
         }
-
         return render(request, 'app/querytype/update.html', data)
+
     else:
-        # Manejar el caso si no se puede obtener la categoría de la API
-        messages.error(
-            request, "Error al obtener el tipo de consulta de la API")
+        # Manejar el caso si no se puede obtener el tipo de consulta de la API
+        messages.error(request, "Error al obtener el tipo de consulta de la API")
         return redirect(to="list_query_type")
 
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def delete_query_type(request, id):
-    querytype_data = get_object_query_type(id)
+    # Obtener datos del tipo de consulta
+    querytype_data = QueryTypeAPI.get_object_query_type(id)
 
     if querytype_data:
-        # Crear una instancia de Product solo con el ID
-        querytype = QueryType(id=querytype_data['id'])
-
-        # Realizar una solicitud DELETE a la API para eliminar el producto
-        delete_response = requests.delete(
-            settings.API_BASE_URL + f'query-type/{id}/')
-
-        if delete_response.status_code == 204:
-            querytype.delete()
+        # Intentar eliminar el tipo de consulta utilizando el helper
+        if QueryTypeAPI.delete_query_type(id):
             messages.success(request, "Eliminado correctamente")
             return redirect(to="list_query_type")
         else:
-            # Manejar el caso de error en la solicitud DELETE
-            print(
-                f'Error al eliminar el tipo de consulta: {delete_response.content}')
+            # Manejar el caso de error al eliminar
             error_message = "Error al eliminar el tipo de consulta a través de la API"
-            data = {
-                'form': QueryTypeForm(instance=querytype),
-                'error_message': error_message
-            }
-            return render(request, 'app/query-type/update.html', data)
     else:
-        # Manejar el caso de error al obtener el producto
+        # Manejar el caso si no se puede obtener el tipo de consulta
         error_message = "Error al obtener el tipo de consulta a través de la API"
-        data = {
-            'error_message': error_message
-        }
-        return render(request, 'app/query-type/update.html', data)
+
+    # Renderizar la página de error
+    messages.error(request, error_message)
+    return redirect(to="list_query_type")
 
 # VISTAS DE PRODUCT
-
-
-def get_object_product(id):
-    response = requests.get(settings.API_BASE_URL + f'product/{id}/')
-
-    if response.status_code == 200:
-        product_data = response.json()
-        product_data.pop('image', None)  # Eliminar el campo de imagen del JSON
-        return product_data
-    else:
-        print(f'Error al obtener el producto: {response.content}')
-        return None
-
-
 @user_passes_test(is_admin)
 @require_http_methods(["GET", "POST"])
 def add_product(request):
     if request.method == 'POST':
-        error_message = ""
         form = ProductForm(request.POST, request.FILES)
         if form.is_valid():
             name = form.cleaned_data['name']
 
-            # Verificar si existe un producto con el mismo nombre a través de la API
-            response = requests.get(
-                settings.API_BASE_URL + f'product/?name={name}')
-
-            if response.status_code == 200:
-                existing_products = response.json()
-
-                if existing_products:
-                    # Verificar si algún producto tiene un nombre diferente al nombre actual
-                    for existing_product in existing_products:
-                        if existing_product['name'] == name and existing_product['id'] != id:
-                            form.add_error('name', 'Este producto ya existe')
-                            error_message = "Este producto ya existe"
-                            print(
-                                "existing_product['name']: ", existing_product['name'])
-                            print("name: ", name)
-                            break  # Salir del bucle si se encuentra un producto existente
-                if not error_message:
-                    price = form.cleaned_data['price']
-                    description = form.cleaned_data['description']
-                    is_new = form.cleaned_data['is_new']
-                    category_id = form.cleaned_data['category'].id
-                    stock = form.cleaned_data['stock']
-                    is_featured = form.cleaned_data['is_featured']
-                    image = form.cleaned_data['image']
-                    is_rentable = form.cleaned_data['is_rentable']
-
-                    product_data = {
-                        'name': name,
-                        'price': price,
-                        'description': description,
-                        'is_new': is_new,
-                        'category': category_id,
-                        'stock': stock,
-                        'is_featured': is_featured,
-                        'is_rentable': is_rentable,
-                    }
-
-                    response = requests.post(
-                        settings.API_BASE_URL + 'product/',
-                        data=product_data,
-                        files={'image': image}
-                    )
-
-                    if response.status_code == 201:
-                        print('Producto creado exitosamente')
-                        messages.success(
-                            request, 'Producto agregado exitosamente.')
-                        return redirect('list_product')
-                    else:
-                        print(
-                            f'Error al crear el producto: {response.content}')
-                        error_message = "Error al crear el producto a través de la API"
+            # Verificar duplicados a través del helper
+            if ProductAPI.check_duplicate_product(name):
+                form.add_error('name', 'Este producto ya existe')
+                error_message = "Este producto ya existe"
             else:
-                print(
-                    f'Error al verificar la existencia del producto: {response.content}')
-                error_message = "Error al verificar la existencia del producto a través de la API"
+                # Preparar datos del producto
+                product_data = {
+                    'name': name,
+                    'price': form.cleaned_data['price'],
+                    'description': form.cleaned_data['description'],
+                    'is_new': form.cleaned_data['is_new'],
+                    'category': form.cleaned_data['category'].id if form.cleaned_data['category'] else None,
+                    'stock': form.cleaned_data['stock'],
+                    'is_featured': form.cleaned_data['is_featured'],
+                    'is_rentable': form.cleaned_data['is_rentable'],
+                }
+
+                # Crear el producto a través del helper
+                created_product = ProductAPI.create_product(data=product_data, files={'image': form.cleaned_data['image']})
+                if created_product:
+                    messages.success(request, 'Producto agregado exitosamente.')
+                    return redirect('list_product')
+                else:
+                    error_message = "Error al crear el producto a través de la API"
         else:
             error_message = "Error en los datos del formulario"
-        data = {
-            'form': form,
-            'error_message': error_message
-        }
-    else:
-        data = {
-            'form': ProductForm()
-        }
-    return render(request, 'app/product/add.html', data)
 
+        data = {'form': form, 'error_message': error_message}
+    else:
+        data = {'form': ProductForm()}
+
+    return render(request, 'app/product/add.html', data)
 
 @user_passes_test(is_admin)
 @require_http_methods(["GET"])
@@ -706,18 +609,18 @@ def list_product(request):
     name_filter = request.GET.get('name', '')
     category_filter = request.GET.get('category', '')
 
+    # Filtros para productos
     params = {}
     if name_filter:
         params['name'] = name_filter
     if category_filter:
         params['category'] = category_filter
 
-    response = requests.get(settings.API_BASE_URL + 'product/', params=params)
-    if response.status_code == 200:
-        products = response.json()
-    else:
-        products = []
+    # Obtener productos y todas las categorías
+    products = ProductAPI.list_products(params=params)
+    categories = CategoryAPI.get_categories()
 
+    # Paginación
     paginator = Paginator(products, 5)
     page = request.GET.get('page')
 
@@ -728,9 +631,6 @@ def list_product(request):
     except EmptyPage:
         products = paginator.page(paginator.num_pages)
 
-    response = requests.get(settings.API_BASE_URL + 'category/')
-    categories = response.json()
-
     data = {
         'entity': products,
         'paginator': paginator,
@@ -740,85 +640,46 @@ def list_product(request):
     }
     return render(request, 'app/product/list.html', data)
 
-
 @user_passes_test(is_admin)
 @require_http_methods(["GET", "POST"])
 def update_product(request, id):
-    product_data = get_object_product(id)
+    product_data = ProductAPI.get_product(id)
 
     if product_data:
         error_message = ""
 
         if request.method == 'POST':
             form = ProductForm(request.POST, request.FILES)
-
             if form.is_valid():
                 name = form.cleaned_data['name']
-
-                # Verificar si existe un producto con el mismo nombre a través de la API
-                response = requests.get(
-                    settings.API_BASE_URL + f'product/?name={name}')
-
-                if response.status_code == 200:
-                    existing_products = response.json()
-
-                    if existing_products:
-                        # Verificar si algún producto tiene un nombre diferente al nombre actual
-                        for existing_product in existing_products:
-                            if existing_product['name'] == name and existing_product['id'] != id:
-                                form.add_error(
-                                    'name', 'Este producto ya existe')
-                                error_message = "Este producto ya existe"
-                                print(
-                                    "existing_product['name']: ", existing_product['name'])
-                                print("name: ", name)
-                                break  # Salir del bucle si se encuentra un producto existente
-
-                    if not error_message:
-                        description = form.cleaned_data['description']
-                        price = form.cleaned_data['price']
-                        is_new = form.cleaned_data['is_new']
-                        category_id = form.cleaned_data['category'].id
-                        stock = form.cleaned_data['stock']
-                        is_featured = form.cleaned_data['is_featured']
-                        image = form.cleaned_data['image']
-                        is_rentable = form.cleaned_data['is_rentable']
-
-                        # Crear un nuevo diccionario con los datos actualizados
-                        updated_data = {
-                            'name': name,
-                            'description': description,
-                            'price': price,
-                            'is_new': is_new,
-                            'category': category_id,
-                            'stock': stock,
-                            'is_featured': is_featured,
-                            'is_rentable': is_rentable
-                        }
-
-                        # Actualizar el producto a través de la API
-                        update_url = settings.API_BASE_URL + f'product/{id}/'
-                        files = {'image': image}  # Archivo adjunto
-                        response = requests.put(
-                            update_url, data=updated_data, files=files)
-
-                        if response.status_code == 200:
-                            print('Producto actualizado exitosamente')
-                            messages.success(
-                                request, "Modificado correctamente")
-                            return redirect(to="list_product")
-                        else:
-                            print(
-                                f'Error al actualizar el producto: {response.content}')
-                            error_message = "Error al actualizar el producto a través de la API"
+                # Verificar duplicados excluyendo el producto actual
+                if ProductAPI.check_duplicate_product(name, exclude_id=int(id)):
+                    form.add_error('name', 'Este producto ya existe')
+                    error_message = "Este producto ya existe"
                 else:
-                    print(
-                        f'Error al verificar la existencia del producto: {response.content}')
-                    error_message = "Error al verificar la existencia del producto a través de la API"
+                    updated_data = {
+                        'name': name,
+                        'description': form.cleaned_data['description'],
+                        'price': form.cleaned_data['price'],
+                        'is_new': form.cleaned_data['is_new'],
+                        'category': form.cleaned_data['category'].id if form.cleaned_data['category'] else None,
+                        'stock': form.cleaned_data['stock'],
+                        'is_featured': form.cleaned_data['is_featured'],
+                        'is_rentable': form.cleaned_data['is_rentable']
+                    }
+
+                    files = {'image': form.cleaned_data['image']} if form.cleaned_data['image'] else None
+                    updated_product = ProductAPI.update_product(id, updated_data, files)
+
+                    if updated_product:
+                        messages.success(request, "Modificado correctamente")
+                        return redirect(to="list_product")
+                    else:
+                        error_message = "Error al actualizar el producto a través de la API"
             else:
                 error_message = "Error en los datos del formulario"
         else:
-            form = ProductForm(initial=product_data)
+            form = ProductForm(initial=product_data, product_image_url=product_data.get('image'))
             error_message = ""
 
         data = {
@@ -828,115 +689,102 @@ def update_product(request, id):
 
         return render(request, 'app/product/update.html', data)
     else:
-        # Manejar el caso si no se puede obtener el producto de la API
         messages.error(request, "Error al obtener el producto de la API")
         return redirect(to="list_product")
-
 
 @user_passes_test(is_admin)
 @require_http_methods(["GET"])
 def delete_product(request, id):
-    product_data = get_object_product(id)
+    # Obtener los datos del producto
+    product_data = ProductAPI.get_product(id)
 
     if product_data:
-        # Crear una instancia de Product solo con el ID
-        product = Product(id=product_data['id'])
-
-        # Realizar una solicitud DELETE a la API para eliminar el producto
-        delete_response = requests.delete(
-            settings.API_BASE_URL + f'product/{id}/')
-
-        if delete_response.status_code == 204:
-            product.delete()
+        # Intentar eliminar el producto a través del helper
+        if ProductAPI.delete_product(id):
             messages.success(request, "Eliminado correctamente")
-            return redirect(to="list_product")
         else:
             # Manejar el caso de error en la solicitud DELETE
-            print(f'Error al eliminar el producto: {delete_response.content}')
             error_message = "Error al eliminar el producto a través de la API"
             messages.error(request, error_message)
-            # Redireccionar a la página de listado con mensaje de error
-            return redirect(to="list_product")
     else:
         # Manejar el caso de error al obtener el producto
         error_message = "Error al obtener el producto a través de la API"
         messages.error(request, error_message)
-        # Redireccionar a la página de listado con mensaje de error
-        return redirect(to="list_product")
+
+    # Redireccionar a la página de listado
+    return redirect(to="list_product")
 
 @require_http_methods(["GET"])
 def product_detail(request, id):
-    # Realizar una solicitud GET a la API para obtener los detalles del producto
-    response = requests.get(settings.API_BASE_URL + f'product/{id}/')
+    # Obtener los detalles del producto
+    product_data = ProductAPI.get_product(id)
 
-    if response.status_code == 200:
-        product_data = response.json()
-
-        # Obtener la instancia de Category a través de la API
-        category_id = product_data['category']
-        category_data = get_object_category(category_id)
+    if product_data:
+        # Obtener la categoría del producto
+        category_id = product_data.get('category')
+        category_data = CategoryAPI.get_category_by_id(category_id)
 
         if category_data:
-            # Crear el objeto Category con los datos obtenidos de la API
+            # Crear instancia de categoría
             category = Category(**category_data)
 
-            # Remover el campo 'category_name' del diccionario product_data
+            # Actualizar el producto con la instancia de categoría
+            product_data['category'] = category
             product_data.pop('category_name', None)
 
-            # Actualizar el campo 'category' en product_data con la instancia de Category
-            product_data['category'] = category
-
-            # Crear el objeto Product con los datos actualizados
+            # Crear la instancia del producto
             product = Product(**product_data)
 
-            data = {
-                'product': product
-            }
-            return render(request, 'app/product/detail.html', data)
+            return render(request, 'app/product/detail.html', {'product': product})
         else:
-            # Manejar el caso si no se puede obtener la categoría de la API
-            error_message = "Error al obtener la categoría de la API"
-            return render(request, 'app/product/detail.html', {'error_message': error_message})
+            # Manejar error al obtener categoría
+            messages.error(request, "Error al obtener la categoría de la API.")
+            return render(request, 'app/product/detail.html', {'error_message': "Error al obtener la categoría."})
     else:
-        # Manejar el caso de error en la solicitud
-        print(
-            f'Error al obtener los detalles del producto: {response.content}')
-        error_message = "Error al obtener los detalles del producto a través de la API"
-        return render(request, 'app/product/detail.html', {'error_message': error_message})
+        # Manejar error al obtener producto
+        messages.error(request, "Error al obtener el producto de la API.")
+        return render(request, 'app/product/detail.html', {'error_message': "Error al obtener el producto."})
 
-# VISTA DE REGISTRO NO API
-
-
-# METODOS DEL CARRITO NO API
+# METODOS DEL CARRITO
 @require_http_methods(["GET"])
 def add_prod_cart(request, product_id):
     cart = Cart(request)
-    product = Product.objects.get(id=product_id)
 
-    if product.stock <= 0:
-        messages.error(request, "Error: Product is out of stock.")
-    elif cart.get_product_quantity(product) >= product.stock:
-        messages.error(request, "Error: Maximum stock limit reached.")
+    # Obtener los detalles del producto desde el helper
+    product_data = ProductAPI.get_product(product_id)
+
+    if product_data:
+        if product_data['stock'] <= 0:
+            messages.error(request, "Error: Product is out of stock.")
+        elif cart.get_product_quantity(product_data) >= product_data['stock']:
+            messages.error(request, "Error: Maximum stock limit reached.")
+        else:
+            # Agregar el producto al carrito
+            cart.add(product_data)
+            #messages.success(request, "Product added to cart successfully.")
     else:
-        cart.add(product)
-        # messages.success(request, "Product added to cart successfully.")
+        messages.error(request, "Error: Could not retrieve product details.")
 
     return redirect(to="Cart")
-
 
 @require_http_methods(["GET"])
 def del_prod_cart(request, product_id):
     cart = Cart(request)
-    product = Product.objects.get(id=product_id)
-    cart.delete(product)
+    product = ProductAPI.get_product(product_id)  # Obtener el producto desde la API
+    if product:  # Verificar que el producto exista en la API
+        cart.delete(product)
+    else:
+        messages.error(request, "Error: Producto no encontrado en el sistema.")
     return redirect(to="Cart")
-
 
 @require_http_methods(["GET"])
 def subtract_product_cart(request, product_id):
     cart = Cart(request)
-    product = Product.objects.get(id=product_id)
-    cart.subtract(product)
+    product = ProductAPI.get_product(product_id)  # Obtener el producto desde la API
+    if product:  # Verificar que el producto exista en la API
+        cart.subtract(product)
+    else:
+        messages.error(request, "Error: Producto no encontrado en el sistema.")
     return redirect("Cart")
 
 @require_http_methods(["GET"])
@@ -947,7 +795,10 @@ def clean_cart(request):
 
 @require_http_methods(["GET"])
 def cart_page(request):
-    products = Product.objects.all()
+    # Obtener todos los productos desde la API
+    products = ProductAPI.list_products()
+
+    # Preparar los datos para la plantilla
     data = {
         'products': products
     }
@@ -963,38 +814,40 @@ def buy_confirm(request):
     return redirect('home')
 
 # VISTAS CATEGORY
-
-
-def get_object_category(id):
-    response = requests.get(settings.API_BASE_URL + f'category/{id}/')
-
-    if response.status_code == 200:
-        category_data = response.json()
-        category_data.pop('image', None)
-        return category_data
-    else:
-        print(f'Error al obtener la categoria: {response.content}')
-        return None
-
-
 @user_passes_test(is_admin)
 @require_http_methods(["GET", "POST"])
 def add_category(request):
     if request.method == 'POST':
         form = CategoryForm(request.POST, request.FILES)
         if form.is_valid():
-            error_message = None  # Inicializamos la variable error_message
-            try:
-                serializer = CategorySerializer(data=form.cleaned_data)
-                serializer.is_valid(raise_exception=True)
-                serializer.save()
-                messages.success(request, 'Categoría agregada exitosamente.')
-                return redirect('list_category')
-            except serializers.ValidationError as e:
-                # Agregar mensaje de error al campo 'name'
-                form.add_error('name', e.detail['name'][0])
+            name = form.cleaned_data['name']
+
+            # Verificar duplicados a través del helper
+            if CategoryAPI.check_duplicate_category(name):
+                form.add_error('name', 'Esta categoría ya existe')
+                error_message = "Esta categoría ya existe"
+            else:
+                # Preparar datos de la categoría
+                category_data = {
+                    'name': name,
+                    'description': form.cleaned_data['description'],
+                }
+                category_image = form.cleaned_data['image']
+
+                # Crear categoría a través del helper
+                created_category = CategoryAPI.create_category(
+                    data=category_data,
+                    files={'image': category_image} if category_image else None
+                )
+
+                if created_category:
+                    messages.success(request, 'Categoría agregada exitosamente.')
+                    return redirect('list_category')
+                else:
+                    error_message = "Error al crear la categoría a través de la API"
         else:
             error_message = "Error en los datos del formulario"
+
         data = {
             'form': form,
             'error_message': error_message
@@ -1006,31 +859,34 @@ def add_category(request):
 
     return render(request, 'app/category/add.html', data)
 
-
 @user_passes_test(is_admin)
 @require_http_methods(["GET"])
 def list_category(request):
-    response = requests.get(settings.API_BASE_URL + 'category/')
-    categories = response.json()
-    page = request.GET.get('page', 1)
+    # Obtener las categorías desde el helper
+    categories = CategoryAPI.get_categories()
 
+    # Manejo de paginación
+    page = request.GET.get('page', 1)
     try:
         paginator = Paginator(categories, 5)
         categories = paginator.page(page)
-    except:
-        raise Http404
+    except PageNotAnInteger:
+        categories = paginator.page(1)
+    except EmptyPage:
+        categories = paginator.page(paginator.num_pages)
 
+    # Preparar datos para la plantilla
     data = {
         'entity': categories,
         'paginator': paginator
     }
     return render(request, 'app/category/list.html', data)
 
-
 @user_passes_test(is_admin)
 @require_http_methods(["GET", "POST"])
 def update_category(request, id):
-    category_data = get_object_category(id)
+    # Obtener los datos de la categoría desde el helper
+    category_data = CategoryAPI.get_category_by_id(id)
 
     if category_data:
         error_message = ""
@@ -1041,56 +897,31 @@ def update_category(request, id):
             if form.is_valid():
                 name = form.cleaned_data['name']
 
-                # Verificar si existe una categoría con el mismo nombre a través de la API
-                response = requests.get(
-                    settings.API_BASE_URL + f'category/?name={name}')
-
-                if response.status_code == 200:
-                    existing_categories = response.json()
-
-                    if existing_categories:
-                        # Verificar si alguna categoría tiene un nombre diferente al nombre actual
-                        for existing_category in existing_categories:
-                            if existing_category['name'] == name and existing_category['id'] != int(id):
-                                form.add_error(
-                                    'name', 'Esta categoría ya existe')
-                                error_message = "Esta categoría ya existe"
-                                print(
-                                    "existing_category['name']: ", existing_category['name'])
-                                print("name: ", name)
-                                break  # Salir del bucle si se encuentra una categoría existente
-
-                    if not error_message:
-                        description = form.cleaned_data['description']
-                        image = form.cleaned_data['image']
-
-                        # Crear un nuevo diccionario con los datos actualizados
-                        updated_data = {
-                            'name': name,
-                            'description': description
-                        }
-
-                        # Actualizar la categoría a través de la API
-                        update_url = settings.API_BASE_URL + f'category/{id}/'
-                        files = {'image': image}  # Archivo adjunto
-                        response = requests.put(
-                            update_url, data=updated_data, files=files)
-
-                        if response.status_code == 200:
-                            print('Categoría actualizada exitosamente')
-                            messages.success(
-                                request, "Modificado correctamente")
-                            return redirect(to="list_category")
-                        else:
-                            print(
-                                f'Error al actualizar la categoría: {response.content}')
-                            error_message = "Error al actualizar la categoría a través de la API"
+                # Verificar duplicados excluyendo el ID actual
+                if CategoryAPI.check_duplicate_category(name, exclude_id=int(id)):
+                    form.add_error('name', 'Esta categoría ya existe')
+                    error_message = "Esta categoría ya existe"
                 else:
-                    print(
-                        f'Error al verificar la existencia de la categoría: {response.content}')
-                    error_message = "Error al verificar la existencia de la categoría a través de la API"
+                    description = form.cleaned_data['description']
+                    image = form.cleaned_data.get('image')
+
+                    # Crear un diccionario con los datos actualizados
+                    updated_data = {
+                        'name': name,
+                        'description': description
+                    }
+
+                    # Actualizar la categoría a través del helper
+                    files = {'image': image} if image else None
+                    updated_category = CategoryAPI.update_category(id, updated_data, files)
+
+                    if updated_category:
+                        messages.success(request, "Categoría modificada correctamente.")
+                        return redirect(to="list_category")
+                    else:
+                        error_message = "Error al actualizar la categoría a través de la API."
             else:
-                error_message = "Error en los datos del formulario"
+                error_message = "Error en los datos del formulario."
         else:
             form = CategoryForm(initial=category_data)
             error_message = ""
@@ -1099,50 +930,35 @@ def update_category(request, id):
             'form': form,
             'error_message': error_message
         }
-
         return render(request, 'app/category/update.html', data)
     else:
-        # Manejar el caso si no se puede obtener la categoría de la API
-        messages.error(request, "Error al obtener la categoría de la API")
+        # Manejar el caso de error al obtener la categoría
+        messages.error(request, "Error al obtener la categoría de la API.")
         return redirect(to="list_category")
-
 
 @user_passes_test(is_admin)
 @require_http_methods(["GET"])
 def delete_category(request, id):
-    category_data = get_object_category(id)
+    # Obtener los datos de la categoría desde el helper
+    category_data = CategoryAPI.get_category_by_id(id)
 
     if category_data:
-        # Crear una instancia de Product solo con el ID
-        category = Category(id=category_data['id'])
-
-        # Realizar una solicitud DELETE a la API para eliminar el producto
-        delete_response = requests.delete(
-            settings.API_BASE_URL + f'category/{id}/')
-
-        if delete_response.status_code == 204:
-            category.delete()
+        # Intentar eliminar la categoría a través del helper
+        if CategoryAPI.delete_category(id):
             messages.success(request, "Eliminado correctamente")
             return redirect(to="list_category")
         else:
-            # Manejar el caso de error en la solicitud DELETE
-            print(f'Error al eliminar la categoria: {delete_response.content}')
-            error_message = "Error al eliminar la categoria a través de la API"
-            data = {
-                'form': CategoryForm(instance=category),
-                'error_message': error_message
-            }
-            return render(request, 'app/category/update.html', data)
+            # Manejar error al eliminar la categoría a través de la API
+            error_message = "Error al eliminar la categoría a través de la API"
+            messages.error(request, error_message)
     else:
-        # Manejar el caso de error al obtener el producto
-        error_message = "Error al obtener la categoria a través de la API"
-        data = {
-            'error_message': error_message
-        }
-        return render(request, 'app/category/update.html', data)
+        # Manejar error al obtener la categoría
+        error_message = "Error al obtener la categoría a través de la API"
+        messages.error(request, error_message)
+
+    return redirect(to="list_category")
 
 # PANEL DE ADMIN
-
 @user_passes_test(is_admin)
 @require_http_methods(["GET", "POST"])
 def admin_panel(request):
@@ -1178,6 +994,7 @@ def checkout_view(request):
     }
     return render(request, "app/checkout.html", context)
 
+# pendiente a revisar comportamiento de api
 @require_http_methods(["GET", "POST"])
 def user_login(request):
     global tok
@@ -1247,7 +1064,6 @@ def Recuperar(request):
     return render(request, 'registration/Recuperar.html', {'form': form})
 
 # se crea usuario nuevo y token
-
 class LoginView(APIView):
     def post(self, request, format=None):
         django_request = HttpRequest()
@@ -1304,87 +1120,109 @@ def Registrar(request):
 @require_http_methods(["GET", "POST"])
 def update_last_order_paid_status(user):
     try:
-        last_order = Order.objects.filter(user=user).latest('id')
-        last_order.pagado = True
-        last_order.save()
-    except Order.DoesNotExist:
-        pass
+        # Obtener la última orden del usuario
+        last_order = OrderAPI.get_last_order_by_user(user.id)
+        if last_order:
+            # Actualizar el estado de pago de la última orden
+            updated_order = OrderAPI.update_order(last_order["order_id"], {"pagado": True})
+            if updated_order:
+                print("Orden actualizada exitosamente.")
+            else:
+                print("Error al actualizar la orden.")
+        else:
+            print("No se encontró ninguna orden para el usuario.")
+    except Exception as e:
+        print(f"Excepción al actualizar el estado de la última orden: {str(e)}")
 
 @require_http_methods(["GET", "POST"])
 def payment_success(request):
     if request.method == 'POST':
         user = request.user if request.user.is_authenticated else None
         name = request.POST.get('name')
+        email = request.POST.get('email')
+        region_id = request.POST.get('region')
+        municipality_id = request.POST.get('municipality')
         address = request.POST.get('address')
         phone = request.POST.get('phone')
         accumulated = request.POST.get('accumulated')
 
-        # Crear la orden
-        order = Order(user=user, name=name, address=address, phone=phone, accumulated=accumulated)
-        
-        # Guarda la orden y asegúrate de que el ID se genere
-        order.save()
+        region = Region.objects.filter(id=region_id).first()
+        municipality = Municipality.objects.filter(id=municipality_id).first()
 
-        # Agregar los productos a la orden
-        cart_items = request.session.get('cart', {}).items()
-        for key, value in cart_items:
-            product_name = value.get('product_name')
-            product_price = value.get('product_price')
-            amount = value.get('amount')
-            order_item = OrderItem(order=order, product_name=product_name, product_price=product_price, amount=amount)
-            order_item.save()
+        # Crear la orden a través del helper
+        order_data = {
+            'user': user.id if user else None,
+            'name': name,
+            'email': email,
+            'region': region.id if region else None,
+            'municipality': municipality.id if municipality else None,
+            'address': address,
+            'phone': phone,
+            'accumulated': accumulated,
+        }
+        order_response = OrderAPI.create_order(order_data)
 
-        # Asegúrate de pasar el objeto `order` al template
-        return render(request, 'app/payment_success.html', {'order': order})
+        if order_response:
+            order_id = order_response['order_id']
+            cart = Cart(request)
+
+            for key, value in cart.cart_items.items():
+                product_id = value.get("product_id")
+                amount = value.get("amount")
+                order_item_data = {
+                    'order': order_id,
+                    'product': product_id,
+                    'amount': amount,
+                }
+                OrderItemAPI.create_order_item(order_item_data)
+
+            # Vaciar el carrito después de que se procesen la orden y los ítems
+            cart.clean()
+
+            # Renderizar la página de éxito
+            return render(request, 'app/payment_success.html', {'order': order_response})
+
+        # Si algo falla en el proceso, mostrar un mensaje de error
+        messages.error(request, "Error al procesar la orden. Intente nuevamente.")
+        return redirect('checkout_view')
 
     return render(request, 'app/checkout.html')
 
+# Como mejora se puede hacer que la cantidad de productos vendidos se actualize segun el paginador
 @require_http_methods(["GET", "POST"])
 def order_list(request):
-    orders = Order.objects.prefetch_related('orderitem_set').all()
-    page = request.GET.get('page', 1)
+    # Parámetros de filtro
+    params = {
+        'start_date': request.GET.get('start_date'),
+        'end_date': request.GET.get('end_date'),
+        'order_item_name': request.GET.get('order_item_name'),
+    }
 
-    # Filtros por rango de fecha
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    if start_date and end_date:
-        orders = orders.filter(fecha__range=[start_date, end_date])
+    # Obtener órdenes desde el helper
+    orders_response = OrderAPI.list_orders(params)
+    orders = orders_response.get('results', [])  # Lista de órdenes
 
-        # Filtro por nombre de OrderItem
-    order_item_name = request.GET.get('order_item_name')
-    if order_item_name:
-        orders = orders.filter(
-            orderitem__product_name__icontains=order_item_name)
-
-    total_accumulated = orders.aggregate(total_accumulated=Sum('accumulated'))[
-        'total_accumulated']
-
-    # Obtener el total de productos vendidos
-    total_products_sold = OrderItem.objects.filter(
-        order__in=orders).aggregate(total_sold=Sum('amount'))['total_sold']
-
-    # Obtener los 4 productos más vendidos considerando los filtros
-    # top_products = OrderItem.objects.filter(order__in=orders).values('product_name').annotate(total_amount=Count('product_name')).order_by('-total_amount')[:4]
-    top_products = OrderItem.objects.filter(order__in=orders).values(
-        'product_name').annotate(total_amount=Sum('amount')).order_by('-total_amount')[:4]
-
-    paginator = Paginator(orders, 5)
+    # Crear una instancia de Paginator local para manejar la paginación
+    paginator = Paginator(orders, 5)  # Paginación con 5 elementos por página
+    page_number = int(request.GET.get('page', 1))  # Convertir a entero
     try:
-        orders = paginator.page(page)
+        orders = paginator.page(page_number)
     except PageNotAnInteger:
         orders = paginator.page(1)
     except EmptyPage:
         orders = paginator.page(paginator.num_pages)
 
+    # Obtener estadísticas desde el helper
+    statistics = OrderAPI.get_statistics(params)
+
     data = {
         'entity': orders,
-        'paginator': paginator,
-        'total_accumulated': total_accumulated,
-        'total_products_sold': total_products_sold,
-        'top_products': top_products
+        'paginator': paginator,  # Información de paginación
+        'total_accumulated': statistics.get('total_accumulated', 0),
+        'total_products_sold': statistics.get('total_products_sold', 0),
+        'top_products': statistics.get('top_products', []),
     }
     return render(request, 'app/order_list.html', data)
-
 
 @api_view(['POST'])
 def obtain_token(request):
@@ -1401,31 +1239,39 @@ def obtain_token(request):
             })
     return Response({'error': 'Credenciales inválidas.'}, status=400)
 
+# (aca vamos con el update de api_helpers)
 @require_http_methods(["GET", "POST"])
 def list_rental_order(request):
     product_name = request.GET.get('product_name')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    response = requests.get(settings.API_BASE_URL + 'rental-orders/')
-    if response.status_code != 200:
-        error_message = 'Error al obtener los datos de la API'
-        return HttpResponse(error_message, status=500)
+    # Obtener las órdenes de renta desde la API
+    rental_orders = RentalOrderAPI.list_rental_orders()
 
-    rental_orders = response.json()
+    # Función auxiliar para filtrar por nombre de producto
+    def filter_by_product_name(rental_orders, product_name):
+        return [
+            ro for ro in rental_orders
+            if any(product_name.lower() in item['product_name'].lower() for item in ro['items'])
+        ]
 
-    # Aplicar los filtros después de recibir los datos de la API
-    if product_name:
-        rental_orders = [ro for ro in rental_orders if any(
-            product_name.lower() in item['product_name'].lower() for item in ro['items'])]
-
-    if start_date and end_date:
+    # Función auxiliar para filtrar por fechas
+    def filter_by_date(rental_orders, start_date, end_date):
         start_date = parse(start_date).date()
         end_date = parse(end_date).date()
-        rental_orders = [ro for ro in rental_orders if start_date <= parse(
-            ro['deliver_date']).date() <= end_date]
+        return [
+            ro for ro in rental_orders
+            if start_date <= parse(ro['deliver_date']).date() <= end_date
+        ]
 
-    # Calcular el precio acumulado y la cantidad de productos vendidos
+    # Aplicar filtros
+    if product_name:
+        rental_orders = filter_by_product_name(rental_orders, product_name)
+    if start_date and end_date:
+        rental_orders = filter_by_date(rental_orders, start_date, end_date)
+
+    # Calcular totales
     total_accumulated = sum(
         float(item['product_price']) * item['amount']
         for ro in rental_orders
@@ -1437,45 +1283,39 @@ def list_rental_order(request):
         for item in ro['items']
     )
 
-    # Calcular el campo total_price para cada rental_order
+    # Añadir total_price a cada orden
     for rental_order in rental_orders:
-        total_price = 0
-        for item in rental_order['items']:
-            product_price = float(item['product_price'])
-            amount = item['amount']
-            total_price += product_price * amount
-        rental_order['total_price'] = total_price
+        rental_order['total_price'] = sum(
+            float(item['product_price']) * item['amount']
+            for item in rental_order['items']
+        )
 
-    # Obtener una lista de todos los productos vendidos
+    # Obtener los productos más vendidos
     all_products = [
         item['product_name']
         for ro in rental_orders
         for item in ro['items']
     ]
-
-    # Contar la cantidad de veces que se vende cada producto
     product_counts = Counter(all_products)
-
-    # Obtener los productos más vendidos
-    top_products = []
-    for product, _ in product_counts.most_common(4):
-        total_amount = sum(
+    top_products = [
+        (product, sum(
             item['amount']
             for ro in rental_orders
             for item in ro['items']
             if item['product_name'] == product
-        )
-        top_products.append((product, total_amount))
+        )) for product, _ in product_counts.most_common(4)
+    ]
 
-    # Crear un Paginator con los datos sin paginar
+    # Crear un paginador
     paginator = Paginator(rental_orders, 5)
     page = request.GET.get('page', 1)
 
     try:
         rental_orders = paginator.page(page)
-    except:
-        error_message = 'Error al paginar los datos'
-        return HttpResponse(error_message, status=500)
+    except PageNotAnInteger:
+        rental_orders = paginator.page(1)
+    except EmptyPage:
+        rental_orders = paginator.page(paginator.num_pages)
 
     data = {
         'entity': rental_orders,
@@ -1485,7 +1325,6 @@ def list_rental_order(request):
         'top_products': top_products,
     }
     return render(request, "app/rental_order/list.html", data)
-
 
 # Implementacion API Transbank
 def webpay_init_transaction(request):
@@ -1520,41 +1359,41 @@ def webpay_init_transaction(request):
 def webpay_return(request):
     """
     Confirma la transacción cuando el usuario regresa desde Webpay.
+    Maneja casos de éxito, rechazo o cancelación.
     """
-    token = request.GET.get("token_ws")
+    token_ws = request.GET.get("token_ws")
+    tbk_token = request.GET.get("TBK_TOKEN")
+    tbk_orden_compra = request.GET.get("TBK_ORDEN_COMPRA")
+    tbk_id_sesion = request.GET.get("TBK_ID_SESION")
 
-    # Configuración de Transbank para el ambiente de integración
-    tx = Transaction(
-        WebpayOptions(
-            "597055555532",                        # Código de comercio de prueba
-            "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",  # API Key de prueba
-            IntegrationType.TEST                   # Modo de prueba, cambiar a .LIVE para PRODUCCION
+    # Si el token_ws está presente, intentamos confirmar la transacción
+    if token_ws:
+        tx = Transaction(
+            WebpayOptions(
+                "597055555532",                        # Código de comercio de prueba
+                "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",  # API Key de prueba
+                IntegrationType.TEST                   # Modo de prueba
+            )
         )
-    )
+        try:
+            response = tx.commit(token_ws)
+            # Confirmar éxito
+            if response.get("response_code") == 0:
+                return render(request, "app/transbank/payment_success.html", {"response": response})
+            else:
+                return render(request, "app/transbank/payment_failed.html", {"error": "Transacción rechazada."})
+        except Exception as e:
+            return render(request, "app/transbank/payment_failed.html", {"error": f"Error al confirmar transacción: {str(e)}"})
 
-    # Realizar la confirmación de la transacción
-    response = tx.commit(token)
-    
-    # Acceder a los valores del diccionario directamente
-    if response.get("response_code") == 0:
-        return render(request, "app/transbank/payment_success.html", {"response": response})
-    else:
-        return render(request, "app/transbank/payment_failed.html", {"error": "Transacción rechazada."})
-    
-# API VIEWS para Location
-@api_view(['GET'])
-def list_regions(request):
-    regions = Region.objects.all()
-    serializer = RegionSerializer(regions, many=True)
-    return Response(serializer.data)
+    # Si TBK_TOKEN está presente, significa que la compra fue anulada
+    elif tbk_token:
+        return render(request, "app/transbank/payment_failed.html", {
+            "error": "Compra anulada por el usuario.",
+            "tbk_token": tbk_token,
+            "tbk_orden_compra": tbk_orden_compra,
+            "tbk_id_sesion": tbk_id_sesion,
+        })
 
-@api_view(['GET'])
-def list_municipalities(request):
-    region_id = request.GET.get('region_id')
-    if region_id:
-        municipalities = Municipality.objects.filter(region_id=region_id)
-    else:
-        municipalities = Municipality.objects.all()
-    
-    serializer = MunicipalitySerializer(municipalities, many=True)
-    return Response(serializer.data)
+    # Si no hay parámetros relevantes, mostramos un error genérico
+    return render(request, "app/transbank/payment_failed.html", {"error": "Error desconocido al procesar la transacción."})
+

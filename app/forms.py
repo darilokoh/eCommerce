@@ -8,7 +8,7 @@ from django.core.validators import MinValueValidator
 from django.forms import ModelForm
 
 #importaciones del proyecto
-from .models import Contact, Product, Category, QueryType, RentalOrder, Usuarios, Order
+from .models import Contact, Product, Category, QueryType, RentalOrder, Usuarios, Order, Region, Municipality
 from .validators import MaxSizeFileValidator, validate_phone
 from django.contrib.auth.forms import PasswordChangeForm
 
@@ -27,7 +27,6 @@ class PhoneField(forms.CharField):
         kwargs['label'] = PHONE_LABEL
         super().__init__(*args, **kwargs)
 
-
 class CambiarPasswordForm(PasswordChangeForm):
     old_password = forms.CharField(
         label="Contraseña actual",
@@ -41,7 +40,6 @@ class CambiarPasswordForm(PasswordChangeForm):
         label="Confirmar nueva contraseña",
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirmar nueva contraseña'})
     )
-
 
 class ContactForm(forms.ModelForm):
     name = forms.CharField(min_length=8, max_length=50, required=True, label='Nombre completo')
@@ -108,6 +106,12 @@ class ProductForm(forms.ModelForm):
             'image': 'Imagen',
             'is_rentable': '¿Arrendable?'
         }
+        
+    def __init__(self, *args, **kwargs):
+        product_image_url = kwargs.pop('product_image_url', None)
+        super().__init__(*args, **kwargs)
+        if product_image_url:
+            self.fields['image'].widget.attrs.update({'data_image_url': product_image_url})
 
 class CustomUserCreationForm(UserCreationForm):
     pass
@@ -187,16 +191,16 @@ class OrderForm(forms.ModelForm):
 
     email = forms.EmailField(required=True, label="Correo Electrónico", widget=forms.EmailInput(attrs={"class": "form-control"}))
 
-    region = forms.ChoiceField(
+    region = forms.ModelChoiceField(
+        queryset=Region.objects.all(),
         required=True,
         label="Región",
-        choices=[],  # Define las choices como una lista vacía, para establecerlas en la vista
         widget=forms.Select(attrs={"class": "form-control"})
     )
-    municipality = forms.ChoiceField(
+    municipality = forms.ModelChoiceField(
+        queryset=Municipality.objects.all(),
         required=True,
         label="Comuna",
-        choices=[('', 'Seleccione una comuna')],  # Esto se inicializará desde la vista
         widget=forms.Select(attrs={"class": "form-control"})
     )
 

@@ -1,15 +1,17 @@
 from django.urls import path, include
+
+#Imports de views
 from .views import home, rental_service, catalogue, contact,\
     add_product, list_product, update_product, delete_product,\
-    ProductViewset, CategoryViewset,  product_detail,\
-    add_prod_cart, del_prod_cart, subtract_product_cart,\
-    clean_cart, cart_page, buy_confirm, add_category,\
-    list_category, update_category, delete_category, admin_panel,\
-    ContactViewSet,checkout_view, list_contact,\
-    QueryTypeViewset, update_contact_status, add_query_type, list_query_type,\
-    update_query_type, delete_query_type, RentalOrderViewSet, list_rental_order,\
-    RentalOrderItemViewSet, RegionViewSet, MunicipalityViewSet, webpay_init_transaction, \
-    webpay_return
+    product_detail, add_prod_cart, del_prod_cart, subtract_product_cart,\
+    clean_cart, cart_page, buy_confirm, add_category,list_category, update_category,\
+    delete_category, admin_panel, checkout_view, list_contact, update_contact_status,\
+    add_query_type, list_query_type, update_query_type, delete_query_type, list_rental_order,\
+    webpay_init_transaction, webpay_return
+
+# Imports de ViewSets
+from .views import ProductViewset, CategoryViewset, ContactViewSet, QueryTypeViewset, RentalOrderViewSet,\
+    RentalOrderItemViewSet, RegionViewSet, MunicipalityViewSet, OrderViewSet, OrderItemViewSet
 
 from . import views
 from .views import Registrar, order_list
@@ -22,6 +24,7 @@ from .views import payment_success
 from .views import obtain_token
 from rest_framework import routers
 
+# Definición de Routers para API´s
 router = routers.DefaultRouter()
 router.register('product', ProductViewset)
 router.register('category', CategoryViewset)
@@ -31,6 +34,8 @@ router.register(r'rental-orders', RentalOrderViewSet, basename='rental-orders')
 router.register(r'rental-order-items', RentalOrderItemViewSet)
 router.register('regions', RegionViewSet, basename='regions')
 router.register('municipalities', MunicipalityViewSet, basename='municipalities')
+router.register('orders', OrderViewSet, basename='orders')
+router.register('order-items', OrderItemViewSet, basename='order-items')
 
 urlpatterns = [
     path('CambiarPassword/', CambiarPassword, name='CambiarPassword'),

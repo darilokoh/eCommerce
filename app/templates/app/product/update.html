@@ -24,14 +24,25 @@
                     {% csrf_token %}
 
                     {{ form|crispy }}
+
+                    <!-- Vista previa de la imagen actual -->
+                    {% if form.image.field.widget.attrs.data_image_url %}
+                        <div class="form-group mt-3 text-center">
+                            <p>Imagen actual:</p>
+                            <img src="{{ form.image.field.widget.attrs.data_image_url }}" 
+                                 alt="Imagen actual del producto" 
+                                 style="max-width: 150px; max-height: 150px;">
+                        </div>
+                    {% endif %}
+
                     <div class="container">
-                        <div class="text-center">
+                        <div class="text-center mt-3">
                             <a href="{% url 'list_product' %}">
                                 <button class="btn btn-default bg-primary-3 add-to-cart-btn" type="button">Volver</button>
                             </a>
                             <button type="submit" class="btn btn-default bg-primary-3">Modificar</button>
                         </div>
-                      </div>
+                    </div>                    
 
                 </form>
                 {{message}}
@@ -39,5 +50,4 @@
         </div>
     </div>
 </div>
-
 {% endblock %}

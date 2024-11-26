@@ -1,4 +1,4 @@
-from .models import Product, Category, Contact, QueryType, RentalOrder, RentalOrderItem, Tokens, Region, Municipality
+from .models import Product, Category, Contact, QueryType, RentalOrder, RentalOrderItem, Tokens, Region, Municipality, Order, OrderItem
 from rest_framework import serializers
 from django.core.mail import send_mail
 from django.utils import timezone
@@ -11,7 +11,7 @@ class CategorySerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         instance = self.instance
 
-        # Verificar si existe otro producto con el mismo nombre
+        # Verificar si existe otro category con el mismo nombre
         if instance is not None:
             exists = Category.objects.filter(name__iexact=value).exclude(pk=instance.pk).exists()
         else:
@@ -125,7 +125,7 @@ class RentalOrderSerializer(serializers.ModelSerializer):
         return formatted_date
 
     def get_items(self, rental_order):
-        rental_order_items = rental_order.rentalorderitem_set.all()
+        rental_order_items = rental_order.items.all()
         return RentalOrderItemSerializer(rental_order_items, many=True).data
 
     class Meta:
@@ -157,3 +157,25 @@ class MunicipalitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Municipality
         fields = ['id', 'name', 'region']
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.ReadOnlyField(source="product.name")
+    product_price = serializers.ReadOnlyField(source="product.price")
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'order', 'product', 'amount', 'product_name', 'product_price']
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)  # Incluye los items
+    created_at = serializers.SerializerMethodField()
+    user_username = serializers.ReadOnlyField(source="user.username")  # Nuevo campo
+
+    def get_created_at(self, obj):
+        created_at = obj.created_at.astimezone(timezone.get_current_timezone())
+        return DateFormat(created_at).format("d-m-Y H:i")
+
+    class Meta:
+        model = Order
+        fields = "__all__"
+        extra_fields = ['user_username']

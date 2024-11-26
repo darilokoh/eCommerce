@@ -3,6 +3,11 @@ document.addEventListener("DOMContentLoaded", function () {
   // Obtiene el elemento con el ID 'logout-link'
   var logoutLink = document.getElementById("logout-link");
 
+  // Verifica si 'logoutLink' existe en la página
+  if (!logoutLink) {
+    return; // Salir si no existe
+  }
+
   // Define una variable para indicar si el usuario ha iniciado sesión o no
   var isAuthenticated = false;
 
@@ -29,12 +34,13 @@ document.addEventListener("DOMContentLoaded", function () {
         reverseButtons: true,
       }).then((result) => {
         if (result.isConfirmed) {
-          window.location.href = event.target.href; // Redirige al usuario a la página de cierre de sesión
+          window.location.href = event.target.href;
         }
       });
     });
   }
 });
+
 
 const cartToggle = document.getElementById("cart-toggle");
 const cartContainer = document.getElementById("cart");
@@ -49,11 +55,7 @@ cartCloseButton.addEventListener("click", () => {
   toggleCartVisibility();
 });
 
-window.addEventListener("scroll", () => {
-  if (isCartVisible) {
-    toggleCartVisibility();
-  }
-});
+
 
 document.addEventListener("click", (event) => {
   const target = event.target;
@@ -121,27 +123,31 @@ function toggleCartVisibility() {
 // font-family: 'Convergence', sans-serif;
 
 $(document).ready(function() {
-    $('#id_region').change(function() {
-        var regionId = $(this).val();
-        var municipalitySelect = $('#id_municipality');
-
-        // Limpiar las opciones anteriores
-        municipalitySelect.empty();
-        municipalitySelect.append('<option value="">Seleccione una comuna</option>');
-
-        if (regionId) {
-            $.ajax({
-                url: "/api/municipalities/",
-                data: { 'region_id': regionId },
-                success: function(data) {
-                    $.each(data, function(index, municipality) {
-                        municipalitySelect.append('<option value="' + municipality.id + '">' + municipality.name + '</option>');
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error en la solicitud AJAX:", error);
-                }
-            });
-        }
-    });
+  $.ajaxSetup({
+    headers: {
+        'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+    }
+  });
+  
+  $('#id_region').change(function() {
+      var regionId = $(this).val();
+      var municipalitySelect = $('#id_municipality');
+      // Limpiar las opciones anteriores
+      municipalitySelect.empty();
+      municipalitySelect.append('<option value="">Seleccione una comuna</option>');
+      if (regionId) {
+          $.ajax({
+              url: "/api/municipalities/",
+              data: { 'region_id': regionId },
+              success: function(data) {
+                  $.each(data, function(index, municipality) {
+                      municipalitySelect.append('<option value="' + municipality.id + '">' + municipality.name + '</option>');
+                  });
+              },
+              error: function(xhr, status, error) {
+                  console.error("Error en la solicitud AJAX:", error);
+              }
+          });
+      }
+  });
 });

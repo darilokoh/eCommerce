@@ -3,35 +3,74 @@
 {% load static %}
 
 {% block js %}
-<script src="{% static 'core/js/jquery-3.6.0.js'%}"></script>
-
 <script>
     $(document).ready(function () {
-        $('.update-status-btn').click(function () {
+        $.ajaxSetup({
+            headers: {
+                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+        // Actualizar estado
+        $('.change-status').change(function () {
             var contactId = $(this).data('contact-id');
-            var newStatus = $(this).data('status');
+            var newStatus = $(this).val();
+
+            // Evitar recarga del formulario
+            event.preventDefault();
 
             $.ajax({
                 url: '/api/contact/' + contactId + '/',
                 method: 'PATCH',
                 data: { 'status': newStatus },
                 success: function (response) {
-                    // Actualizar el estado en la tabla
-                    $('[data-contact-id="' + contactId + '"]').closest('tr').find('td:eq(5)').text(newStatus);
+                    console.log("Estado actualizado exitosamente."); // Confirmar ejecución
+                    // Mostrar alerta de éxito con SweetAlert2
+                    Swal.fire({
+                        title: '¡Éxito!',
+                        text: 'El estado del contacto se ha actualizado correctamente.',
+                        icon: 'success',
+                        confirmButtonText: 'Aceptar'
+                    });
                 },
                 error: function (xhr, status, error) {
-                    console.log(error);
+                    console.log("Error al actualizar estado: ", error); // Confirmar error
+                    // Mostrar alerta de error con SweetAlert2
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'No se pudo actualizar el estado del contacto. Por favor, intenta nuevamente.',
+                        icon: 'error',
+                        confirmButtonText: 'Aceptar'
+                    });
                 }
             });
-        });
+        })
 
+        // Filtro de estado
         $('#status').change(function() {
             var selectedStatus = $(this).val();
+            var queryType = $('#query_type').val();
+            var url = '/list-contact/?';
             if (selectedStatus) {
-                window.location.href = '/list-contact/?status=' + selectedStatus;
-            } else {
-                window.location.href = '/list-contact/';
+                url += 'status=' + selectedStatus + '&';
             }
+            if (queryType) {
+                url += 'query_type=' + queryType;
+            }
+            window.location.href = url;
+        });
+
+        // Filtro de tipo de contacto
+        $('#query_type').change(function() {
+            var selectedQueryType = $(this).val();
+            var status = $('#status').val();
+            var url = '/list-contact/?';
+            if (status) {
+                url += 'status=' + status + '&';
+            }
+            if (selectedQueryType) {
+                url += 'query_type=' + selectedQueryType;
+            }
+            window.location.href = url;
         });
     });
 </script>
@@ -83,7 +122,6 @@
 
                                 <div class="col-md-3 filter-section">
                                     <div class="form-group">
-                                        <button type="submit" name="filter" value="1" class="btn btn-primary">Filtrar</button>
                                         {% if selected_query_type or selected_status %}
                                             <button type="button" class="btn btn-secondary" onclick="window.location.href='{% url 'list_contact' %}'">Limpiar filtros</button>
                                         {% endif %}
@@ -112,14 +150,11 @@
                         <td>{{ c.message }}</td>
                         <td>{{ c.query_type_name }}</td>
                         <td>
-                            <form method="POST" action="{% url 'update_status' c.id %}">
-                                {% csrf_token %}
-                                <select name="status" onchange="this.form.submit()">
-                                    <option value="Nuevo" {% if c.status == 'Nuevo' %}selected{% endif %}>Nuevo</option>
-                                    <option value="En progreso" {% if c.status == 'En progreso' %}selected{% endif %}>En progreso</option>
-                                    <option value="Finalizado" {% if c.status == 'Finalizado' %}selected{% endif %}>Finalizado</option>
-                                </select>
-                            </form>
+                            <select name="status" class="change-status" data-contact-id="{{ c.id }}">
+                                <option value="Nuevo" {% if c.status == 'Nuevo' %}selected{% endif %}>Nuevo</option>
+                                <option value="En progreso" {% if c.status == 'En progreso' %}selected{% endif %}>En progreso</option>
+                                <option value="Finalizado" {% if c.status == 'Finalizado' %}selected{% endif %}>Finalizado</option>
+                            </select>
                         </td>
                     </tr>
                     {% endfor %}

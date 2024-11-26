@@ -14,7 +14,7 @@ from django.contrib.auth.decorators import login_required, permission_required, 
 from app.cart import Cart
 from rest_framework.response import Response
 from django.conf import settings
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Prefetch
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import send_mail
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -1192,25 +1192,25 @@ def payment_success(request):
 @require_http_methods(["GET", "POST"])
 
 def order_list(request):
-    # Parámetros de filtro
-    params = {
-        'start_date': request.GET.get('start_date'),
-        'end_date': request.GET.get('end_date'),
-        'order_item_name': request.GET.get('order_item_name'),
-    }
+    # Obtener todas las órdenes con prefetch para optimización
+    orders = Order.objects.select_related('user').prefetch_related(
+        Prefetch('items', queryset=OrderItem.objects.select_related('product'))
+    ).all()
+    page = request.GET.get('page', 1)
 
-    # Obtener órdenes desde el helper
-    orders_response = OrderAPI.list_orders(params)
-    orders = orders_response.get('results', [])  # Lista de órdenes
+    # Filtros por rango de fecha
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    if start_date and end_date:
+        orders = orders.filter(created_at__range=[start_date, end_date])
 
     # Filtro por nombre de OrderItem
     order_item_name = request.GET.get('order_item_name')
     if order_item_name:
-        orders = orders.filter(orderitem__product_name__icontains=order_item_name)
+        orders = orders.filter(items__product__name__icontains=order_item_name)
 
     # Cálculos generales
-    total_orders_count = orders.count()  # Contar el total de órdenes
-        
+    total_orders_count = orders.count()
     total_accumulated = orders.aggregate(total_accumulated=Sum('accumulated'))['total_accumulated'] or 0
     total_products_sold = OrderItem.objects.filter(order__in=orders).aggregate(
         total_sold=Sum('amount')
@@ -1218,7 +1218,7 @@ def order_list(request):
 
     # Top productos más vendidos
     top_products = OrderItem.objects.filter(order__in=orders).values(
-        'product_name'
+        'product__name'
     ).annotate(
         total_amount=Sum('amount')
     ).order_by('-total_amount')[:4]
@@ -1229,40 +1229,29 @@ def order_list(request):
 
     # Ventas mensuales
     monthly_sales = [
-        orders.filter(fecha__month=month).count() for month in range(1, 13)
+        orders.filter(created_at__month=month).count() for month in range(1, 13)
     ]
 
     # Totales por usuario (top 10 usuarios con mayores acumulados)
-    user_totals = Order.objects.values('user__username').annotate(
+    user_totals = orders.values('user__username').annotate(
         total_accumulated=Sum('accumulated')
     ).order_by('-total_accumulated')[:10]
 
     # Paginación
     paginator = Paginator(orders, 5)
-    page_number = int(request.GET.get('page', 1))
     try:
-        orders = paginator.page(page_number)
+        orders = paginator.page(page)
     except PageNotAnInteger:
         orders = paginator.page(1)
     except EmptyPage:
         orders = paginator.page(paginator.num_pages)
 
-    # Obtener estadísticas desde el helper
-    statistics = OrderAPI.get_statistics(params)
-
-    # data = {
-    #     'entity': orders,
-    #     'paginator': paginator,  # Información de paginación
-    #     'total_accumulated': statistics.get('total_accumulated', 0),
-    #     'total_products_sold': statistics.get('total_products_sold', 0),
-    #     'top_products': statistics.get('top_products', []),
-    # }
     # Contexto para la plantilla
     context = {
         'entity': orders,
         'paginator': paginator,
         'total_accumulated': total_accumulated,
-        'total_orders_count': total_orders_count,  # Incluyendo el total de órdenes
+        'total_orders_count': total_orders_count,
         'total_products_sold': total_products_sold,
         'top_products': top_products,
         'monthly_sales': monthly_sales,
@@ -1270,9 +1259,10 @@ def order_list(request):
                          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
         'paid_orders_count': paid_orders_count,
         'unpaid_orders_count': unpaid_orders_count,
-        'user_totals': user_totals,  # Añadir los totales por usuario al contexto
+        'user_totals': user_totals,
     }
     return render(request, 'app/order_list.html', context)
+
 
 @api_view(['POST'])
 def obtain_token(request):
@@ -1454,7 +1444,7 @@ from django.http import HttpResponse
 
 def generate_excel_report(request):
     # Obtener las órdenes
-    orders = Order.objects.prefetch_related('orderitem_set').all()
+    orders = Order.objects.prefetch_related('items').all()
 
     # Calcular totales
     total_accumulated = orders.aggregate(total_accumulated=Sum('accumulated'))[
@@ -1471,7 +1461,7 @@ def generate_excel_report(request):
     # Ventas mensuales
     months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
               'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
-    monthly_sales = [orders.filter(fecha__month=i).aggregate(
+    monthly_sales = [orders.filter(created_at__month=i).aggregate(
         total=Sum('accumulated'))['total'] or 0 for i in range(1, 13)]
 
     # Estadísticas globales
@@ -1499,14 +1489,14 @@ def generate_excel_report(request):
     # Agregar datos de las órdenes
     for order in orders:
         product_details = "\n".join(
-            [f"{item.product_name} (x{item.amount})" for item in order.orderitem_set.all(
-            )]
+            [f"{item.product.name if item.product else 'Producto desconocido'} (x{item.amount})" 
+             for item in order.items.all()]
         )
         ws.append([
             order.user.username if order.user else "Anónimo",
             order.order_id,
             order.accumulated,
-            order.fecha.strftime("%Y-%m-%d"),
+            order.created_at.strftime("%Y-%m-%d"),
             "Sí" if order.pagado else "No",
             product_details
         ])
@@ -1550,11 +1540,11 @@ def generate_excel_report(request):
     ws[f"A{ws.max_row}"].alignment = align_center
 
     ws.append(["Producto", "Cantidad Vendida"])
-    top_products = OrderItem.objects.values('product_name').annotate(
+    top_products = OrderItem.objects.values('product__name').annotate(
         total_sold=Sum('amount')
     ).order_by('-total_sold')[:10]
     for product in top_products:
-        ws.append([product['product_name'], product['total_sold']])
+        ws.append([product['product__name'], product['total_sold']])
 
     # ================================
     # Top Clientes

@@ -121,8 +121,7 @@
                     <tbody>
                         {% for o in entity %}
                         <tr>
-                            <td>{{ o.user_username|default:"N/A" }}</td>
-
+                            <td>{{ o.user.username|default:"N/A" }}</td>
                             <td>{{ o.order_id }}</td>
                             <td>{{ o.name|default:"N/A" }}</td>
                             <td>{{ o.address|default:"N/A" }}</td>
@@ -133,8 +132,8 @@
 
                             <td>
                                 <ul>
-                                    {% for item in o.items %}
-                                    <li>{{ item.product_name }} - Cantidad: {{ item.amount }}</li>
+                                    {% for item in o.items.all %}
+                                        <li>{{ item.product.name|default:"Producto desconocido" }} - Cantidad: {{ item.amount }}</li>
                                     {% endfor %}
                                 </ul>
                             </td>
@@ -232,7 +231,7 @@
     <script>
         const labels = [
             {% for product in top_products %}
-        "{{ product.product__name }}",
+        "{{ product.product__name|escapejs }}",
             {% endfor %}
         ];
 
@@ -304,7 +303,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             const userLabels = [
                 {% for user in user_totals %}
-                    "{{ user.user_username|escapejs }}",
+                    "{{ user.user__username|escapejs }}",
             {% endfor %}
             ];
 

@@ -8,8 +8,10 @@
 {% block content %}
 {% load humanize %}
 <br><br><br><br><br><br>
-<div class="container my-5">
+<div class="container  my-5">
   <div class="row">
+
+    <!--FILTROS-->
     <div class="col-md-3">
       <div class="card">
         <div class="card-body ">
@@ -45,16 +47,21 @@
         </div>
       </div>
     </div>
+
+    <!--CARDS-->
+
     <div class="col-md-9">
       <div class="row row-cols-1 row-cols-md-3 g-4">
         {% for p in products %}
         <div class="col-6 col-md-4 col-lg-3 mb-4">
-          <div class="card h-100">
+          <div class="card card-home ">
+          <a href="{% url 'product_detail' p.id %}" class="card-link">
             {% if p.image %}
-            <img src="{{ p.image }}" class="card-img-top" alt="{{ product.name }}" style="height: 150px;">
+            <img src="{{ p.image }}" class="card-img-top" alt="{{ product.name }}">
             {% else %}
             <div class="missing-image">Imagen no disponible</div>
             {% endif %}
+          </a>
             <div class="card-body text-center">
               <div class="row">
                 <h5 class="card-title">{{ p.name }}</h5>
@@ -68,7 +75,11 @@
               </div>
             </div>
             <div class="card-footer" style="text-align: center;">
-              <a href="{% url 'product_detail' p.id %}" class="btn btn-default bg-primary-3 view-detail-btn" data-product-id="{{ p.id }}">Ver Detalle</a>
+              <div class="d-flex justify-content-center mb-3">
+                <button class="btn btn-outline-secondary" onclick="decreaseQuantity(this)">-</button>
+                <input type="text" class="quantity form-control w-25 text-center mx-2" value="1" readonly>
+                <button class="btn btn-outline-secondary" onclick="increaseQuantity(this)">+</button>
+              </div>
               <a href="{% url 'Add' p.id %}"
                 class="btn btn-default bg-primary-3 view-detail-btn add-to-cart-btn">Agregar al Carrito</a>           
             </div>
@@ -79,4 +90,23 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block js %}
+<script>function decreaseQuantity(button) {
+  // Encuentra el input correspondiente al botón presionado
+  const quantityInput = button.closest('.card-footer').querySelector('.quantity');
+  let currentQuantity = parseInt(quantityInput.value);
+  if (currentQuantity > 1) {
+      quantityInput.value = currentQuantity - 1;
+  }
+}
+
+function increaseQuantity(button) {
+  // Encuentra el input correspondiente al botón presionado
+  const quantityInput = button.closest('.card-footer').querySelector('.quantity');
+  let currentQuantity = parseInt(quantityInput.value);
+  quantityInput.value = currentQuantity + 1;
+}
+</script>
 {% endblock %}

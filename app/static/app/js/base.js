@@ -55,11 +55,7 @@ cartCloseButton.addEventListener("click", () => {
   toggleCartVisibility();
 });
 
-window.addEventListener("scroll", () => {
-  if (isCartVisible) {
-    toggleCartVisibility();
-  }
-});
+
 
 document.addEventListener("click", (event) => {
   const target = event.target;

@@ -7,7 +7,7 @@ from .views import home, rental_service, catalogue, contact,\
     clean_cart, cart_page, buy_confirm, add_category,list_category, update_category,\
     delete_category, admin_panel, checkout_view, list_contact, update_contact_status,\
     add_query_type, list_query_type, update_query_type, delete_query_type, list_rental_order,\
-    webpay_init_transaction, webpay_return
+    webpay_init_transaction, webpay_return, add_from_catalogue
 
 # Imports de ViewSets
 from .views import ProductViewset, CategoryViewset, ContactViewSet, QueryTypeViewset, RentalOrderViewSet,\
@@ -84,4 +84,6 @@ urlpatterns = [
     path("webpay/init/", webpay_init_transaction, name="webpay_init"),
     path("webpay/return/", webpay_return, name="webpay_return"),
     path('generate-excel/', views.generate_excel_report, name='generate-excel'),
+    path("add-from-catalogue/<int:product_id>/", add_from_catalogue, name="AddFromCatalogue"),
+
 ]

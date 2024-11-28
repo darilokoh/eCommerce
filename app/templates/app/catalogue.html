@@ -7,8 +7,18 @@
 
 {% block content %}
 {% load humanize %}
-<br><br><br><br><br><br>
+<br><br><br>
 <div class="container  my-5">
+  {% if messages %}
+  <div class="alert-container">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
   <div class="row">
 
     <!--FILTROS-->
@@ -33,15 +43,18 @@
             </div>
             <div class="mb-3">
               <label for="min-price-filter" class="form-label">Precio mínimo</label>
-              <input type="number" class="form-control" placeholder="Ingrese el precio mínimo" name="min_price_filter" id="min-price-filter">
+              <input type="number" class="form-control" placeholder="Ingrese el precio mínimo" name="min_price_filter"
+                id="min-price-filter">
             </div>
             <div class="mb-3">
               <label for="max-price-filter" class="form-label">Precio máximo</label>
-              <input type="number" class="form-control" placeholder="Ingrese el precio máximo" name="max_price_filter" id="max-price-filter">
+              <input type="number" class="form-control" placeholder="Ingrese el precio máximo" name="max_price_filter"
+                id="max-price-filter">
             </div>
             <button type="submit" class="btn btn-default bg-primary-3" name="filter_submit">Aplicar filtros</button>
             {% if request.GET.name or request.GET.category or request.GET.min_price_filter or request.GET.max_price_filter %}
-            <button type="submit" class="btn btn-default bg-primary-3 add-to-cart-btn" name="clear_filters">Limpiar filtros</button>
+            <button type="submit" class="btn btn-default bg-primary-3 add-to-cart-btn" name="clear_filters">Limpiar
+              filtros</button>
             {% endif %}
           </form>
         </div>
@@ -55,13 +68,13 @@
         {% for p in products %}
         <div class="col-6 col-md-4 col-lg-3 mb-4">
           <div class="card card-home ">
-          <a href="{% url 'product_detail' p.id %}" class="card-link">
-            {% if p.image %}
-            <img src="{{ p.image }}" class="card-img-top" alt="{{ product.name }}">
-            {% else %}
-            <div class="missing-image">Imagen no disponible</div>
-            {% endif %}
-          </a>
+            <a href="{% url 'product_detail' p.id %}" class="card-link">
+              {% if p.image %}
+              <img src="{{ p.image }}" class="card-img-top" alt="{{ product.name }}">
+              {% else %}
+              <div class="missing-image">Imagen no disponible</div>
+              {% endif %}
+            </a>
             <div class="card-body text-center">
               <div class="row">
                 <h5 class="card-title">{{ p.name }}</h5>
@@ -75,13 +88,18 @@
               </div>
             </div>
             <div class="card-footer" style="text-align: center;">
-              <div class="d-flex justify-content-center mb-3">
-                <button class="btn btn-outline-secondary" onclick="decreaseQuantity(this)">-</button>
-                <input type="text" class="quantity form-control w-25 text-center mx-2" value="1" readonly>
-                <button class="btn btn-outline-secondary" onclick="increaseQuantity(this)">+</button>
-              </div>
-              <a href="{% url 'Add' p.id %}"
-                class="btn btn-default bg-primary-3 view-detail-btn add-to-cart-btn">Agregar al Carrito</a>           
+              <form method="POST" action="{% url 'AddFromCatalogue' p.id %}">
+                {% csrf_token %}
+                <div class="d-flex justify-content-center mb-3">
+                  <!-- INCREMENTADORES -->
+                  <button type="button" class="btn btn-outline-secondary" onclick="decreaseQuantity(this)">-</button>
+                  <input type="text" class="quantity form-control w-25 text-center mx-2" value="1" readonly>
+                  <button type="button" class="btn btn-outline-secondary" onclick="increaseQuantity(this)">+</button>
+                </div>
+                <!-- CAMPO OCULTO QUE RESCATA EL INPUT DEL INCREMENTADOR -->
+                <input type="hidden" name="quantity" value="1">
+                <button type="submit" class="btn btn-primary">Agregar al Carrito</button>
+              </form>
             </div>
           </div>
         </div>
@@ -90,23 +108,34 @@
     </div>
   </div>
 </div>
+
 {% endblock %}
 
 {% block js %}
-<script>function decreaseQuantity(button) {
-  // Encuentra el input correspondiente al botón presionado
-  const quantityInput = button.closest('.card-footer').querySelector('.quantity');
+<script>
+function decreaseQuantity(button) {
+  // Encuentra el input visible y el input oculto
+  const cardFooter = button.closest('.card-footer');
+  const quantityInput = cardFooter.querySelector('.quantity'); // Input visible
+  const hiddenQuantityInput = cardFooter.querySelector('input[name="quantity"]'); // Input oculto
+
   let currentQuantity = parseInt(quantityInput.value);
   if (currentQuantity > 1) {
-      quantityInput.value = currentQuantity - 1;
+    quantityInput.value = currentQuantity - 1;
+    hiddenQuantityInput.value = currentQuantity - 1; // Sincronizar el valor
   }
 }
 
 function increaseQuantity(button) {
-  // Encuentra el input correspondiente al botón presionado
-  const quantityInput = button.closest('.card-footer').querySelector('.quantity');
+  // Encuentra el input visible y el input oculto
+  const cardFooter = button.closest('.card-footer');
+  const quantityInput = cardFooter.querySelector('.quantity'); // Input visible
+  const hiddenQuantityInput = cardFooter.querySelector('input[name="quantity"]'); // Input oculto
+
   let currentQuantity = parseInt(quantityInput.value);
   quantityInput.value = currentQuantity + 1;
+  hiddenQuantityInput.value = currentQuantity + 1; // Sincronizar el valor
 }
+
 </script>
 {% endblock %}

@@ -42,6 +42,7 @@
 <body>
   <div class="header">
     <header>
+      <!-- NAVBAR -->
       <nav class="navbar navbar-expand-lg fixed-top bg-primary nav-gradient">
         <div class="container">
           <a class="navbar-brand" href="{% url 'home' %}">
@@ -115,6 +116,7 @@
 
   <main class="bg-primary-2">
 
+    <!-- CARRITO -->
     <div id="cart" class="cart-container">
       <button id="cart-close" class="cart-close-button">X</button>
       <div class="alert alert-secondary my-5" role="alert">
@@ -138,9 +140,11 @@
             <tr>
               <td><strong>{{value.product_name}}</strong></td>
               <td>{{value.product_price}}</td>
-              <td>{{value.amount}}
-                <a href="{% url 'Add' value.product_id %}" class="badge btn btn-dark badge-dark">+</a>
+              <td>
                 <a href="{% url 'Sub' value.product_id %}" class="badge btn btn-dark badge-dark">-</a>
+                {{value.amount}}
+                <a href="{% url 'Add' value.product_id %}" class="badge btn btn-dark badge-dark">+</a>
+                
               </td>
               <td>{{value.accumulated}}</td>
             </tr>

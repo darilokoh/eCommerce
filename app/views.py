@@ -749,23 +749,33 @@ def product_detail(request, id):
 @require_http_methods(["GET"])
 def add_prod_cart(request, product_id):
     cart = Cart(request)
-
-    # Obtener los detalles del producto desde el helper
     product_data = ProductAPI.get_product(product_id)
 
     if product_data:
         if product_data['stock'] <= 0:
-            messages.error(request, "Error: Product is out of stock.")
+            response = {"success": False, "message": "Error: Product is out of stock."}
         elif cart.get_product_quantity(product_data) >= product_data['stock']:
-            messages.error(request, "Error: Maximum stock limit reached.")
+            response = {"success": False, "message": "Error: Maximum stock limit reached."}
         else:
-            # Agregar el producto al carrito
             cart.add(product_data)
-            #messages.success(request, "Product added to cart successfully.")
+            response = {
+                "success": True,
+                "message": "Product added to cart successfully.",
+                "new_quantity": cart.get_product_quantity(product_data),
+                "product_id": product_id,
+            }
     else:
-        messages.error(request, "Error: Could not retrieve product details.")
+        response = {"success": False, "message": "Error: Could not retrieve product details."}
 
-    return redirect(to="Cart")
+    # Devuelve JSON si es una solicitud AJAX, o redirige si no
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse(response)
+    else:
+        if response["success"]:
+            messages.success(request, response["message"])
+        else:
+            messages.error(request, response["message"])
+        return redirect(request.META.get('HTTP_REFERER', 'catalogue'))
 
 @require_http_methods(["GET"])
 def del_prod_cart(request, product_id):
@@ -775,17 +785,36 @@ def del_prod_cart(request, product_id):
         cart.delete(product)
     else:
         messages.error(request, "Error: Producto no encontrado en el sistema.")
-    return redirect(to="Cart")
+    return redirect(request.META.get('HTTP_REFERER', 'catalogue'))
 
 @require_http_methods(["GET"])
 def subtract_product_cart(request, product_id):
     cart = Cart(request)
     product = ProductAPI.get_product(product_id)  # Obtener el producto desde la API
+    
     if product:  # Verificar que el producto exista en la API
-        cart.subtract(product)
+        try:
+            cart.subtract(product)
+            response = {
+                "success": True,
+                "message": f"{product['name']} quantity decreased.",
+                "new_quantity": cart.get_product_quantity(product),
+                "product_id": product_id,
+            }
+        except ValueError as e:
+            response = {"success": False, "message": str(e)}
     else:
-        messages.error(request, "Error: Producto no encontrado en el sistema.")
-    return redirect("Cart")
+        response = {"success": False, "message": "Error: Producto no encontrado en el sistema."}
+
+    # Devuelve JSON si es una solicitud AJAX, o redirige si no
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse(response)
+    else:
+        if response["success"]:
+            messages.success(request, response["message"])
+        else:
+            messages.error(request, response["message"])
+        return redirect(request.META.get('HTTP_REFERER', 'catalogue'))
 
 @require_http_methods(["GET"])
 def clean_cart(request):
@@ -812,6 +841,30 @@ def buy_confirm(request):
     cart.clean()
     messages.success(request, "Compra de prueba Completada")
     return redirect('home')
+
+@require_http_methods(["POST"])
+def add_from_catalogue(request, product_id):
+    cart = Cart(request)
+    product_data = ProductAPI.get_product(product_id)
+
+    if product_data:
+        if request.method == "POST":
+            try:
+                quantity = int(request.POST.get("quantity", 1))
+            except ValueError:
+                quantity = 1
+
+            if product_data["stock"] <= 0:
+                messages.error(request, "Error: Product is out of stock.")
+            elif cart.get_product_quantity(product_data) + quantity > product_data["stock"]:
+                messages.error(request, "Error: Maximum stock limit reached.")
+            else:
+                cart.increment_item(product_data, quantity=quantity)
+                messages.success(request, f"¡Agregaste {quantity} {product_data['name']} al carrito!")
+    else:
+        messages.error(request, "Error: Could not retrieve product details.")
+
+    return redirect(to="catalogue")  # Asegúrate de redirigir al catálogo o donde prefieras
 
 # VISTAS CATEGORY
 @user_passes_test(is_admin)

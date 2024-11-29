@@ -1,3 +1,52 @@
-<h1>Pago Exitoso</h1>
-<p>Gracias por tu compra. La transacción fue completada exitosamente.</p>
-<p>ID de transacción: {{ response.buy_order }}</p>
+{% extends 'app/base.html' %}
+{% load static %}
+{% block title %}Pago Exitoso | Conejo Furioso{% endblock %}
+{% block css %}
+<style>
+/* Estilo para centrar y ajustar el contenido */
+#content-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh; /* Ajusta para evitar un diseño demasiado alto */
+  margin: 0 auto; /* Centra el contenedor horizontalmente */
+  padding: 20px;
+}
+
+/* Estilo para la tarjeta */
+.card {
+  background-color: rgba(255, 255, 255, 0.9); /* Fondo blanco con algo de transparencia */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Borde suave */
+  border-radius: 15px; /* Bordes redondeados más pronunciados */
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2); /* Sombra para profundidad */
+  padding: 30px 40px; /* Espaciado interno */
+  max-width: 500px; /* Ancho máximo */
+  text-align: center; /* Texto centrado */
+  color: #333; /* Texto oscuro */
+  font-family: 'Arial', sans-serif; /* Tipografía */
+}
+
+/* Encabezado estilizado */
+.card h1 {
+  font-size: 2rem;
+  margin-bottom: 15px;
+  color: #1e88e5; /* Color acorde al branding */
+}
+
+/* Párrafo estilizado */
+.card p {
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-wrapper">
+    <div class="card">
+        <h1>Pago Exitoso</h1>
+        <p>Gracias por tu compra. La transacción fue completada exitosamente.</p>
+        <p>¡Recibirás un correo con la información!</p>
+    </div>
+</div>
+{% endblock %}

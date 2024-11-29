@@ -63,18 +63,23 @@ class Cart:
 
             # Obtener el producto desde la API
             product_data = ProductAPI.get_product(product_id)
-
+            
             if product_data:
                 current_stock = product_data.get("stock", 0)
                 new_stock = current_stock - int(value["amount"])
 
                 if new_stock >= 0:
-                    # Actualizar el producto en la API con el nuevo stock
-                    ProductAPI.update_product(product_id, {"stock": new_stock})
+                    # Actualizar solo el stock usando PATCH
+                    response = ProductAPI.update_product_stock(product_id, {"stock": new_stock}, use_patch=True)
+
+                    # Verificar si la actualización fue exitosa
+                    if response is None:
+                        messages.error(self.request, f"Error al actualizar el producto {product_data['name']}.")
                 else:
                     messages.error(self.request, f"Error: Stock insuficiente para el producto {value['product_name']}.")
             else:
                 messages.error(self.request, f"Error al obtener datos del producto {value['product_name']} de la API.")
+
 
     def get_product_quantity(self, product):
         product_id = str(product["id"])  # Acceso por clave JSON

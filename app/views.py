@@ -1188,7 +1188,7 @@ def update_last_order_paid_status(user):
         print(f"Excepción al actualizar el estado de la última orden: {str(e)}")
 
 @require_http_methods(["GET", "POST"])
-def payment_success(request):
+def order_created(request):
     if request.method == 'POST':
         user = request.user if request.user.is_authenticated else None
         name = request.POST.get('name')
@@ -1230,10 +1230,10 @@ def payment_success(request):
                 OrderItemAPI.create_order_item(order_item_data)
 
             # Vaciar el carrito después de que se procesen la orden y los ítems
-            cart.clean()
+            # cart.clean()
 
             # Renderizar la página de éxito
-            return render(request, 'app/payment_success.html', {'order': order_response})
+            return render(request, 'app/order_created.html', {'order': order_response})
 
         # Si algo falla en el proceso, mostrar un mensaje de error
         messages.error(request, "Error al procesar la orden. Intente nuevamente.")
@@ -1472,6 +1472,12 @@ def webpay_return(request):
             response = tx.commit(token_ws)
             # Confirmar éxito
             if response.get("response_code") == 0:
+                # Llamar a Cart.buy() para actualizar el stock
+                cart = Cart(request)
+                cart.buy()  # Actualiza el stock de los productos en la API
+                cart.clean()  # Limpia el carrito después de actualizar el stock
+
+                # Redirigir a la página de éxito con la respuesta de Transbank
                 return render(request, "app/transbank/payment_success.html", {"response": response})
             else:
                 return render(request, "app/transbank/payment_failed.html", {"error": "Transacción rechazada."})
@@ -1489,6 +1495,7 @@ def webpay_return(request):
 
     # Si no hay parámetros relevantes, mostramos un error genérico
     return render(request, "app/transbank/payment_failed.html", {"error": "Error desconocido al procesar la transacción."})
+
 
 import openpyxl
 from openpyxl.styles import Font, Alignment

@@ -165,6 +165,38 @@ class ProductAPI:
             return None
         
     @staticmethod
+    def update_product_stock(id, data, files=None, use_patch=False):
+        """
+        Actualiza un producto a través de la API.
+
+        Args:
+            id (int): ID del producto a actualizar.
+            data (dict): Datos del producto.
+            files (dict): Archivos relacionados, como la imagen.
+            use_patch (bool): Si es True, usa PATCH en lugar de PUT.
+
+        Returns:
+            dict | None: Respuesta de la API si es exitosa, None en caso contrario.
+        """
+        url = f"{settings.API_BASE_URL}product/{id}/"
+        try:
+            # Selecciona el método HTTP según use_patch
+            if use_patch:
+                response = requests.patch(url, data=data, files=files)
+            else:
+                response = requests.put(url, data=data, files=files)
+
+            # Verifica el estado de la respuesta
+            if response.status_code in [200, 204]:
+                return response.json() if response.status_code == 200 else {"success": True}
+            else:
+                print(f"Error al actualizar el producto: {response.status_code}, {response.content}")
+                return None
+        except requests.exceptions.RequestException as e:
+            print(f"Excepción al actualizar el producto: {str(e)}")
+            return None
+        
+    @staticmethod
     def delete_product(id):
         """
         Elimina un producto a través de la API.

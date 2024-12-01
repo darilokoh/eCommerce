@@ -1,16 +1,67 @@
 {% extends 'app/base.html' %}
 
 {% load static %}
-
-{% block content %}
 {% load humanize %}
 
+{% block content %}
 <br><br><br>
 <div class="container my-5">
+    <div class="container rounded shadow" style="background-color: white;">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <!-- Gráfico de torta -->
+                <div class="chart-container">
+                    <canvas id="topProductsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-5">
+            <div class="col-md-6">
+                <!-- GRÁFICO ORDENES DE USUARIO -->
+                <div class="chart-container">
+                    <canvas id="userOrdersChart"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <!-- GRÁFICO VENTAS X MES -->
+                <div class="chart-container">
+                    <canvas id="monthlySalesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROW DE INDICADORES -->
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Total Órdenes</h5>
+                    <p class="card-text">{{ total_orders_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Órdenes Pagadas</h5>
+                    <p class="card-text">{{ paid_orders_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="card-title">Órdenes No Pagadas</h5>
+                    <p class="card-text">{{ unpaid_orders_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
     <br><br>
     <div class="card">
         <div class="card-body">
-            <h2 style="text-align: center;">Lista de Ordenes</h2>
+            <h2 style="text-align: center;">Lista de Órdenes</h2>
             <hr>
             <div class="table-responsive">
                 <!-- Formulario de filtros -->
@@ -44,9 +95,11 @@
                         </div>
                         <div class="col-md-2">
                             <div class="form-group mt-4">
-                                <a href="{% url 'order_list' %}" class="btn btn-default bg-primary-3 add-to-cart-btn form-control">Limpiar filtros</a>
+                                <a href="{% url 'order_list' %}"
+                                    class="btn btn-default bg-primary-3 add-to-cart-btn form-control">Limpiar
+                                    filtros</a>
                             </div>
-                        </div>                        
+                        </div>
                     </div>
                 </form>
                 <!-- Fin del formulario de filtros -->
@@ -55,9 +108,9 @@
                     <thead>
                         <tr>
                             <th scope="col">Usuario</th>
-                            <th scope="col">Numero de orden</th>
+                            <th scope="col">Número de orden</th>
                             <th scope="col">Nombre</th>
-                            <th scope="col">Direccion</th>
+                            <th scope="col">Dirección</th>
                             <th scope="col">Celular</th>
                             <th scope="col">Total Orden</th>
                             <th scope="col">Pagado</th>
@@ -68,42 +121,19 @@
                     <tbody>
                         {% for o in entity %}
                         <tr>
-                            <td>{{ o.user_username|default:"N/A" }}</td>
-
+                            <td>{{ o.user.username|default:"N/A" }}</td>
                             <td>{{ o.order_id }}</td>
-
-                            {% if o.name %}
-                            <td>{{ o.name }}</td>
-                            {% else %}
-                            <td>N/A</td>
-                            {% endif %}
-
-                            {% if o.address %}
-                            <td>{{ o.address }}</td>
-                            {% else %}
-                            <td>N/A</td>
-                            {% endif %}
-
-                            {% if o.phone %}
-                            <td>{{ o.phone }}</td>
-                            {% else %}
-                            <td>N/A</td>
-                            {% endif %}
-
+                            <td>{{ o.name|default:"N/A" }}</td>
+                            <td>{{ o.address|default:"N/A" }}</td>
+                            <td>{{ o.phone|default:"N/A" }}</td>
                             <td>{{ o.accumulated | intcomma }}</td>
-
-                            {% if o.pagado %}
-                            <td>Si</td>
-                            {% else %}
-                            <td>No</td>
-                            {% endif %}
-
+                            <td>{% if o.pagado %}Sí{% else %}No{% endif %}</td>
                             <td>{{ o.created_at }}</td>
 
                             <td>
                                 <ul>
-                                    {% for item in o.items %}
-                                    <li>{{ item.product_name }} - Cantidad: {{ item.amount }}</li>
+                                    {% for item in o.items.all %}
+                                        <li>{{ item.product.name|default:"Producto desconocido" }} - Cantidad: {{ item.amount }}</li>
                                     {% endfor %}
                                 </ul>
                             </td>
@@ -119,19 +149,18 @@
                         background-color: #ffffff;
                         border: 1px solid #000000;
                     }
-                
+
                     th,
                     td {
                         text-align: left;
                         padding: 8px;
                         border: 1px solid #000000;
                     }
-                
+
                     th {
                         background-color: #f2f2f2;
                     }
                 </style>
-
                 <div class="total-accumulated">
                     <table>
                         <tr>
@@ -144,7 +173,6 @@
                         </tr>
                     </table>
                 </div>
-
                 <div class="top-products">
                     <h3>Productos más vendidos:</h3>
                     <table>
@@ -163,22 +191,253 @@
                             {% endfor %}
                         </tbody>
                     </table>
-
-                    <hr>
-                    <div>
-                        {% include 'app/paginator.html' %}
-                    </div>
                 </div>
+                <!-- CARDS DASHBOARD -->
 
+
+                <hr>
+                <div>
+                    {% include 'app/paginator.html' %}
+                </div>
                 <br>
                 <div class="row list-buttons">
                     <div class="col">
-                        <button class="btn btn-default bg-primary-3" type="button" onclick="window.location.href='{% url 'home' %}'">Volver al Inicio</button>
+                        <button class="btn btn-default bg-primary-3" type="button"
+                            onclick="window.location.href='{% url 'home' %}'">Volver al Inicio</button>
                     </div>
                 </div>
             </div>
         </div>
-
     </div>
 
+    <button onclick="confirmDownload()"
+        style="margin-top: 20px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+        Descargar Reporte en Excel
+    </button>
+
+    <!-- SCRIPT EXCEL DOWNLOAD -->
+    <script>
+        function confirmDownload() {
+            const userConfirmed = confirm("¿Estás seguro de que deseas descargar el reporte en Excel?");
+            if (userConfirmed) {
+                window.location.href = "/generate-excel/";
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+    <!-- SCRIPT GRÁFICO DE TORTA -->
+    <script>
+        const labels = [
+            {% for product in top_products %}
+        "{{ product.product__name|escapejs }}",
+            {% endfor %}
+        ];
+
+        const data = [
+            {% for product in top_products %}
+        {{ product.total_amount }},
+        {% endfor %}
+        ];
+
+        const ctx = document.getElementById('topProductsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Productos más vendidos',
+                    data: data,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom', // Cambia la posición de la leyenda
+                        labels: {
+                            color: '#333', // Color de la fuente
+                            font: {
+                                size: 14, // Tamaño de la fuente
+                                family: 'Trebuchet MS', // Fuente
+
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'PRODUCTOS MÁS VENDIDOS',
+                        font: {
+                            size: 18,
+                            family: 'Trebuchet MS',
+                            weight: 'bold'
+                        },
+                        color: '#000'
+                    }
+                }
+            }
+        });
+    </script>
+
+    <!-- SCRIPT VENTAS X USUARIO -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const userLabels = [
+                {% for user in user_totals %}
+                    "{{ user.user__username|escapejs }}",
+            {% endfor %}
+            ];
+
+        const userTotals = [
+            {% for user in user_totals %}
+        {{ user.total_accumulated }},
+        {% endfor %}
+            ];
+
+        const userCtx = document.getElementById('userOrdersChart').getContext('2d');
+        new Chart(userCtx, {
+            type: 'bar',
+            data: {
+                labels: userLabels,
+                datasets: [{
+                    label: 'Totales por Usuario (Top 10)',
+                    data: userTotals,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false // Ocultar la leyenda para este gráfico
+                    },
+                    title: {
+                        display: true,
+                        text: 'TOTALES POR USUARIO (TOP 10)',
+                        font: {
+                            size: 18,
+                            family: 'Trebuchet MS',
+                            weight: 'bold'
+                        },
+                        color: '#000'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#333',
+                            font: {
+                                size: 12,
+                                family: 'Trebuchet MS'
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#333',
+                            font: {
+                                size: 12,
+                                family: 'Trebuchet MS'
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        });
+    </script>
+
+    <!-- SCRIPT VENTAS X MES -->
+    <script>
+        const monthLabels = {{ month_labels| safe }};
+        const monthlyData = {{ monthly_sales| safe }};
+
+        const monthCtx = document.getElementById('monthlySalesChart').getContext('2d');
+        new Chart(monthCtx, {
+            type: 'line',
+            data: {
+                labels: monthLabels,
+                datasets: [{
+                    label: 'Órdenes por mes',
+                    data: monthlyData,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#333',
+                            font: {
+                                size: 14,
+                                family: 'Trebuchet MS',
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'ÓRDENES POR MES',
+                        font: {
+                            size: 18,
+                            family: 'Trebuchet MS',
+                            weight: 'bold'
+                        },
+                        color: '#000'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#333',
+                            font: {
+                                size: 12,
+                                family: 'Trebuchet MS'
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#333',
+                            font: {
+                                size: 12,
+                                family: 'Trebuchet MS'
+                            }
+                        }
+                    }
+                }
+            }
+
+        });
+    </script>
+</div>
 {% endblock %}

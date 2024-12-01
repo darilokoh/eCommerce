@@ -16,23 +16,33 @@
 
   <link rel="stylesheet" href="{% static 'app/css/styles.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+    integrity="sha384-vtXRMe3mGCbOeY7l30aIg8H9p3GdeSe4IFlP6G8JMa7o7lXvnz3GFKzPxzJdPfGK"
+    crossorigin="anonymous"></script>
 
   <style>
     body {
-        background-image: url("{% static 'app/img/background.png' %}");
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed; /* Para que el fondo sea fijo al hacer scroll */
-        background-repeat: no-repeat;
+      background-image: url("{% static 'app/img/background.png' %}");
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      /* Para que el fondo sea fijo al hacer scroll */
+      background-repeat: no-repeat;
     }
-</style>
+  </style>
+
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+
 </head>
 
 
 <body>
   <div class="header">
     <header>
+      <!-- NAVBAR -->
       <nav class="navbar navbar-expand-lg fixed-top bg-primary nav-gradient">
         <div class="container">
           <a class="navbar-brand" href="{% url 'home' %}">
@@ -62,57 +72,60 @@
             {% load auth_extras %}
 
             {% if request.user|has_group:"admin" %}
-                <div class="nav-item dropdown">
-                  <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown"
-                    aria-expanded="false" tabindex="0"
-                    onkeydown="if(event.key === 'Enter' || event.key === ' ') { this.click(); }">ADMINISTRACIÓN</a>
-                    <ul class="dropdown-menu" aria-labelledby="adminDropdown">
-                        <li><a class="dropdown-item" href="{% url 'list_product' %}">Productos</a></li>
-                        <li><a class="dropdown-item" href="{% url 'list_category' %}">Categorías</a></li>
-                        <li><a class="dropdown-item" href="{% url 'list_contact' %}">Contactos</a></li>
-                        <li><a class="dropdown-item" href="{% url 'list_query_type' %}">Tipo Consulta</a></li>
-                        <li><a class="dropdown-item" href="{% url 'order_list' %}">Ordenes</a></li>
-                    </ul>
-                </div>
+            <div class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown"
+                aria-expanded="false" tabindex="0"
+                onkeydown="if(event.key === 'Enter' || event.key === ' ') { this.click(); }">ADMINISTRACIÓN</a>
+              <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                <li><a class="dropdown-item" href="{% url 'list_product' %}">Productos</a></li>
+                <li><a class="dropdown-item" href="{% url 'list_category' %}">Categorías</a></li>
+                <li><a class="dropdown-item" href="{% url 'list_contact' %}">Contactos</a></li>
+                <li><a class="dropdown-item" href="{% url 'list_query_type' %}">Tipo Consulta</a></li>
+                <li><a class="dropdown-item" href="{% url 'order_list' %}">Ordenes</a></li>
+              </ul>
+            </div>
             {% endif %}
 
             {% if user.is_authenticated %}
-                <input type="hidden" id="is-authenticated" value="{{ user.is_authenticated }}">
+            <input type="hidden" id="is-authenticated" value="{{ user.is_authenticated }}">
 
-                <div class="nav-item dropdown">
-                    <a class="nav-link user-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-user"></i>
-                        <span class="welcome-text ml-2">¡Bienvenido!<br>{{ user.username }}</span>
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="userDropdown">
-                        <li><a class="dropdown-item" href="{% url 'CambiarPassword' %}">Cambiar Contraseña</a></li>
-                        <li><a class="dropdown-item" href="{% url 'logout' %}">Cerrar Sesión</a></li>
-                    </ul>
-                </div>
+            <div class="nav-item dropdown">
+              <a class="nav-link user-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown"
+                role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-user"></i>
+                <span class="welcome-text ml-2">¡Bienvenido!<br>{{ user.username }}</span>
+              </a>
+              <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                <li><a class="dropdown-item" href="{% url 'CambiarPassword' %}">Cambiar Contraseña</a></li>
+                <li><a class="dropdown-item" href="{% url 'logout' %}">Cerrar Sesión</a></li>
+              </ul>
+            </div>
             {% else %}
-                <div class="nav-item login">
-                    <a class="nav-link" aria-current="page" href="{% url 'login' %}">Iniciar Sesión | Registrarse</a>
-                </div>
+            <div class="nav-item login">
+              <a class="nav-link" aria-current="page" href="{% url 'login' %}">Iniciar Sesión | Registrarse</a>
+            </div>
             {% endif %}
-          <button id="cart-toggle" class="btn btn-primary">
-            Ver Carrito <i class="fas fa-shopping-cart"></i>
-          </button>
+            <button id="cart-toggle" class="btn btn-primary">
+              <i class="fas fa-shopping-cart"></i>
+            </button>
+          </div>
         </div>
-  </div>
-  </nav>
-  </header>
+      </nav>
+    </header>
   </div>
 
   <main class="bg-primary-2">
 
+    <!-- CARRITO -->
     <div id="cart" class="cart-container">
       <button id="cart-close" class="cart-close-button">X</button>
       <div class="alert alert-secondary my-5" role="alert">
+
         <table class="table table-bordered table-hover table-responsive-sm">
           <thead>
             <tr>
               <h2 style="text-align: center; justify-content: center;" class="my-2">Carrito</h2>
-                <br>
+              <br>
             </tr>
             <tr>
               <th scope="col">Nombre</th>
@@ -127,9 +140,11 @@
             <tr>
               <td><strong>{{value.product_name}}</strong></td>
               <td>{{value.product_price}}</td>
-              <td>{{value.amount}}
-                <a href="{% url 'Add' value.product_id %}" class="badge btn btn-dark badge-dark">+</a>
+              <td>
                 <a href="{% url 'Sub' value.product_id %}" class="badge btn btn-dark badge-dark">-</a>
+                {{value.amount}}
+                <a href="{% url 'Add' value.product_id %}" class="badge btn btn-dark badge-dark">+</a>
+                
               </td>
               <td>{{value.accumulated}}</td>
             </tr>
@@ -137,7 +152,12 @@
             {% else %}
             <tr>
               <td colspan="4">
-                <div class="alert alert-danger text-center">Sin Productos</div>
+                <div class="container rounded shadow p-4" style="background-color: white;">
+                  <h3>Aún no has agregado productos, ¿Se te antoja algo? &#x1F60B;&#x1F37B;</h3> <!--emojis-->
+                  <hr>
+                  <a href="{% url 'catalogue' %}" class="btn shadow">Ver Catálogo</a>
+
+                </div>
               </td>
             </tr>
             {% endif %}
@@ -165,21 +185,57 @@
 
     <!-- Aquí todo lo correspondiente al footer -->
   </main>
-  <footer class="text-light mt-auto">
+  <footer class="site-footer">
     <div class="container">
-      <div class="row py-2">
-        <div class="col-1 col-sm-12">
-          <div class="ft-item">
-            <a class="ft-link" href="https://www.instagram.com/cervezaconejofurioso/">Instagram</a>
-          </div>
+      <div class="row">
+        <div class="col-sm-12 col-md-6">
+          <h6>NOSOTROS</h6>
+          <p><strong>Conejo Furioso - Cervecería Artesanal Villa Alemana</strong></p>
+          <p>En <strong>Conejo Furioso</strong>, nos enorgullece ofrecer cervezas artesanales de la más alta calidad,
+            elaboradas con pasión y dedicación en el corazón de Villa Alemana. Además de nuestras cervezas exclusivas,
+            ofrecemos <strong>arriendos de barril</strong> para que disfrutes de una experiencia única en tu evento o
+            reunión. También contamos con <strong>retiro en local</strong>, lo que te permite llevarte tus cervezas
+            favoritas directamente de nuestra cervecería.</p>
+          <p><strong>¡Visítanos y descubre el sabor de lo artesanal!</strong></p>
         </div>
-        <div class="col-1 col-sm-12">
-          <div class="ft-item">
-            <a class="ft-link" href="https://www.facebook.com/CervezaConejoFurioso">Facebook</a>
-          </div>
+
+        <div class="col-xs-6 col-md-3">
+          <h6>CERVEZAS</h6>
+          <ul class="footer-links">
+            {% for p in products %}
+            <li><a href="{% url 'product_detail' p.id %}">{{ p.name }}</a></li>
+
+            {% endfor %}
+          </ul>
         </div>
-        <div class="row mt-2" style="font-weight: bold;">
-          &copy; 2023 - Ⓡ Conejo Furioso. Todos los derechos reservados.
+
+        <div class="col-xs-6 col-md-3">
+          <h6>LINKS DE ACCESO</h6>
+          <ul class="footer-links">
+            <li><a href="{% url 'catalogue' %}">Catálogo</a></li>
+            <li><a href="{% url 'rental_service' %}">Servicios</a></li>
+            <li><a href="{% url 'contact' %}">Contacto</a></li>
+          </ul>
+        </div>
+      </div>
+      <hr>
+    </div>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-8 col-sm-6 col-xs-12">
+          <p class="copyright-text">Copyright &copy; 2024 Todos los derechos reservados por
+            <a href="#">X-WEB</a>.
+          </p>
+        </div>
+
+        <div class="col-md-4 col-sm-6 col-xs-12">
+          <ul class="social-icons">
+            <li><a class="facebook" href="https://www.facebook.com/CervezaConejoFurioso/?locale=es_LA"><i
+                  class="fa fa-facebook"></i></a></li>
+            <li><a class="instagram" href="https://www.instagram.com/cervezaconejofurioso/?hl=es"><i
+                  class="fa fa-instagram"></i></a></li>
+            <li><a class="whatsapp" href="#"><i class="fa fa-whatsapp"></i></a></li>
+          </ul>
         </div>
       </div>
     </div>
@@ -187,9 +243,13 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
     crossorigin="anonymous"></script>
-    
+
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+  <script>
+
+
+  </script>
   {% if messages %}
   {% for m in messages %}
   {% if m.tags == 'confirm' %}
@@ -222,6 +282,9 @@
   {% endblock %}
 
   <script src="{% static 'app/js/base.js' %}"></script>
+
+
+
 </body>
 
 </html>

@@ -1,0 +1,129 @@
+{% extends 'app/base.html' %}
+
+{% load static %}
+
+{% block title %}Conejo Furioso{% endblock %}
+
+{% block css %}
+<style>
+    .card {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .success-message {
+        background-color: #f8f9fa; /* Fondo claro para resaltar el mensaje */
+    }
+
+    .payment-options {
+        background-color: #ffffff; /* Fondo blanco para contraste */
+    }
+
+    .row {
+        margin-top: 20px; /* Separación superior */
+    }
+
+    @media (max-width: 576px) {
+        .card {
+            margin-bottom: 20px; /* Separación entre tarjetas en pantallas pequeñas */
+        }
+    }
+
+    .totals {
+        margin-top: 20px;
+        font-size: 1.1rem;
+    }
+
+    #content-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh; /* Ajusta para evitar un diseño demasiado alto */
+        margin: 0 auto; /* Centra el contenedor horizontalmente */
+        padding: 20px;
+      }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" id="content-wrapper">
+    <div class="row">
+        <!-- Card 1: Mensaje de éxito -->
+        <div class="col-12 col-md-6">
+            <div class="card success-message">
+                <h1>Orden de compra exitosa</h1>
+                <p>¡Solo un poco más! ¡Elijamos el medio de pago para esa orden!</p>
+                <!-- Mostrar totales en CLP y USD -->
+                <div class="totals">
+                    <p><strong>Total en CLP:</strong> <span id="cart-total-clp"></span></p>
+                    <p><strong>Total en USD:</strong> <span id="cart-total"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Opciones de pago -->
+        <div class="col-12 col-md-6">
+            <div class="card payment-options">
+                <h2>Opciones de Pago</h2>
+                <div id="paypal-button-container"></div>
+                <!-- Botón de Transbank -->
+                <div class="text-center mt-4">
+                    <form method="POST" action="{% url 'webpay_init' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="buy_order" value="{{ order.order_id }}">
+                        <input type="hidden" name="amount" value="{{ order.accumulated }}">
+                        <input type="hidden" name="session_id" value="{{ request.session.session_key }}">
+                        <button type="submit" class="btn btn-primary">Pagar con Webpay</button>
+                    </form>
+                </div>
+                <div class="text-center mt-4">
+                    <a href="{% url 'buy_confirm' %}" class="btn btn-secondary">Prueba Compra</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://www.paypal.com/sdk/js?client-id=AdFjGOwJCh4h90IyhB_vGCkDbSfakAD6IitR2qFxPOgTtY4Yrd9z_-ycN6ITScW8rqkiDh7EDtOZ8eFs"></script>
+<script>
+    paypal.Buttons({
+        createOrder: function (data, actions) {
+            return actions.order.create({
+                purchase_units: [{
+                    amount: {
+                        value: convertToUSD('{{ cart_total }}')
+                    }
+                }]
+            });
+        },
+        onApprove: (data, actions) => {
+            return actions.order.capture().then(function(orderData) {
+                const transaction = orderData.purchase_units[0].payments.captures[0];
+                alert('Pago exitoso');
+                console.log(`Transaction ${transaction.status}: ${transaction.id}`);
+                actions.redirect('home');
+            });
+        }
+    }).render('#paypal-button-container');
+
+    // Función para convertir el total de CLP a dólares
+    function convertToUSD(totalCLP) {
+        var conversionRate = 0.00124;
+        var totalUSD = totalCLP * conversionRate;
+        return totalUSD.toFixed(2);
+    }
+
+    // Obtener el total en CLP desde la variable de contexto
+    var totalCLP = parseInt("{{ cart_total }}");
+
+    // Calcular el total en USD llamando a la función de conversión
+    var totalUSD = convertToUSD(totalCLP);
+
+    // Mostrar los totales en la página
+    document.getElementById("cart-total-clp").textContent = totalCLP.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
+    document.getElementById("cart-total").textContent = totalUSD;
+</script>
+{% endblock %}

@@ -39,6 +39,10 @@ from transbank.common.integration_type import IntegrationType
 # API HELPERS
 from .api_helpers import LocationAPI, CategoryAPI, ProductAPI, RentalOrderAPI, RentalOrderItemAPI, ContactAPI, QueryTypeAPI, OrderAPI, OrderItemAPI
 
+# Enviar correo al pagar orden
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+
 from django.utils.crypto import get_random_string
 from django.contrib.auth import update_session_auth_hash
 tok = None
@@ -205,6 +209,13 @@ class OrderViewSet(viewsets.ModelViewSet):
         order_item_name = self.request.query_params.get('order_item_name')
         if order_item_name:
             queryset = queryset.filter(items__product__name__icontains=order_item_name)
+
+        # Filtro por estado de pago
+        pagado = self.request.query_params.get('pagado')
+        if pagado is not None:
+            # Convertir el valor de texto a booleano
+            pagado = pagado.lower() in ['true', '1', 'yes']
+            queryset = queryset.filter(pagado=pagado)
 
         return queryset
 
@@ -1188,7 +1199,7 @@ def update_last_order_paid_status(user):
         print(f"Excepción al actualizar el estado de la última orden: {str(e)}")
 
 @require_http_methods(["GET", "POST"])
-def order_created(request):
+def order_created_old(request):
     if request.method == 'POST':
         user = request.user if request.user.is_authenticated else None
         name = request.POST.get('name')
@@ -1236,6 +1247,75 @@ def order_created(request):
             return render(request, 'app/order_created.html', {'order': order_response})
 
         # Si algo falla en el proceso, mostrar un mensaje de error
+        messages.error(request, "Error al procesar la orden. Intente nuevamente.")
+        return redirect('checkout_view')
+
+    return render(request, 'app/checkout.html')
+
+@require_http_methods(["GET", "POST"])
+def order_created(request):
+    if request.method == 'POST':
+        user = request.user if request.user.is_authenticated else None
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        region_id = request.POST.get('region')
+        municipality_id = request.POST.get('municipality')
+        address = request.POST.get('address')
+        phone = request.POST.get('phone')
+        accumulated = request.POST.get('accumulated')
+
+        region = Region.objects.filter(id=region_id).first()
+        municipality = Municipality.objects.filter(id=municipality_id).first()
+
+        order_data = {
+            'user': user.id if user else None,
+            'name': name,
+            'email': email,
+            'region': region.id if region else None,
+            'municipality': municipality.id if municipality else None,
+            'address': address,
+            'phone': phone,
+            'accumulated': accumulated,
+        }
+        order_response = OrderAPI.create_order(order_data)
+
+        if order_response:
+            order_id = order_response['order_id']
+            cart = Cart(request)
+            order_items = []
+
+            for key, value in cart.cart_items.items():
+                product_id = value.get("product_id")
+                amount = value.get("amount")
+                order_item_data = {
+                    'order': order_id,
+                    'product': product_id,
+                    'amount': amount,
+                }
+                created_item = OrderItemAPI.create_order_item(order_item_data)
+                if created_item:
+                    order_items.append({
+                        'product_name': value.get('product_name'),
+                        'product_price': value.get('product_price'),
+                        'amount': value.get('amount'),
+                        'total_price': value.get('product_price') * value.get('amount'),
+                    })
+
+            # Renderizar la página con la información de la orden
+            return render(request, 'app/order_created.html', {
+                'order': order_response,
+                'order_items': order_items,
+                'cart_total': accumulated,
+                'client_data': {  # Información del cliente para la plantilla
+                    'name': name,
+                    'email': email,
+                    'region': region.name if region else None,
+                    'municipality': municipality.name if municipality else None,
+                    'address': address,
+                    'phone': phone,
+                },
+            })
+
         messages.error(request, "Error al procesar la orden. Intente nuevamente.")
         return redirect('checkout_view')
 
@@ -1332,7 +1412,6 @@ def obtain_token(request):
             })
     return Response({'error': 'Credenciales inválidas.'}, status=400)
 
-# (aca vamos con el update de api_helpers)
 @require_http_methods(["GET", "POST"])
 def list_rental_order(request):
     product_name = request.GET.get('product_name')
@@ -1463,22 +1542,63 @@ def webpay_return(request):
     if token_ws:
         tx = Transaction(
             WebpayOptions(
-                "597055555532",                        # Código de comercio de prueba
-                "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",  # API Key de prueba
-                IntegrationType.TEST                   # Modo de prueba
+                "597055555532",
+                "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
+                IntegrationType.TEST
             )
         )
         try:
             response = tx.commit(token_ws)
+
             # Confirmar éxito
             if response.get("response_code") == 0:
+                buy_order = response.get("buy_order")
+
+                # Obtener detalles de la orden por su ID
+                order = OrderAPI.get_by_id(buy_order)
+
+                if not order:
+                    return render(request, "app/transbank/payment_failed.html", {
+                        "error": "No se pudo recuperar la información de la orden."
+                    })
+
+                # Obtener detalles de los productos asociados a la orden
+                order_items = order.get("items", [])
+
+                # Construir los detalles del cliente
+                client_data = {
+                    "name": order.get("name", "Cliente"),
+                    "email": order.get("email", "correo@ejemplo.com"),
+                    "region": order.get("region", "No especificado"),
+                    "municipality": order.get("municipality", "No especificado"),
+                    "address": order.get("address", "No especificado"),
+                    "phone": order.get("phone", "No especificado"),
+                }
+
+                # Enviar correo con los detalles de la orden
+                try:
+                    send_order_receipt(order, order_items, client_data["email"])
+                except Exception as e:
+                    print(f"Error al enviar el correo: {e}")
+
                 # Llamar a Cart.buy() para actualizar el stock
                 cart = Cart(request)
                 cart.buy()  # Actualiza el stock de los productos en la API
                 cart.clean()  # Limpia el carrito después de actualizar el stock
 
+                # Actualizar el estado de la orden a pagado
+                try:
+                    updated_order = OrderAPI.patch_order_paid_status(order["order_id"])
+                    if not updated_order:
+                        print(f"Error al marcar la orden como pagada para la orden ID {order['order_id']}")
+                except Exception as e:
+                    print(f"Error al actualizar el estado de pago de la orden: {e}")
+
                 # Redirigir a la página de éxito con la respuesta de Transbank
-                return render(request, "app/transbank/payment_success.html", {"response": response})
+                return render(request, "app/transbank/payment_success.html", {
+                    "response": response,
+                    "order": order,
+                })
             else:
                 return render(request, "app/transbank/payment_failed.html", {"error": "Transacción rechazada."})
         except Exception as e:
@@ -1495,7 +1615,6 @@ def webpay_return(request):
 
     # Si no hay parámetros relevantes, mostramos un error genérico
     return render(request, "app/transbank/payment_failed.html", {"error": "Error desconocido al procesar la transacción."})
-
 
 import openpyxl
 from openpyxl.styles import Font, Alignment
@@ -1707,3 +1826,73 @@ def generate_excel_report(request):
     # Guardar el archivo Excel en la respuesta
     wb.save(response)
     return response
+
+def format_currency(value):
+    """
+    Formatea un número como moneda con punto como separador de miles.
+    """
+    return "{:,.0f}".format(float(value)).replace(",", ".")
+
+# Enviar correo con los detalles de la compra al ser exitoso el pago
+def send_order_receipt(order, order_items, to_email):
+    """
+    Envía un correo electrónico con la boleta de la orden.
+    """
+    subject = f"Confirmación de tu compra - Número de Orden #{order['order_id']}"
+
+    # Formatea los valores en la orden antes de enviarlos al contexto
+    order['accumulated'] = format_currency(order['accumulated'])
+    for item in order_items:
+        item['product_price'] = format_currency(item['product_price'])
+        item['total_price'] = format_currency(float(item['product_price'].replace('.', '')) * item['amount'])
+
+    # Renderiza el HTML del correo utilizando una plantilla
+    html_message = render_to_string('app/emails/order_receipt.html', {
+        'order': order,
+        'order_items': order_items,
+    })
+    plain_message = strip_tags(html_message)  # Convierte el HTML a texto plano (opcional)
+    from_email = settings.DEFAULT_FROM_EMAIL
+
+    # Envía el correo
+    send_mail(subject, plain_message, from_email, [to_email], html_message=html_message)
+
+@login_required
+def purchases(request):
+    """
+    Muestra las órdenes de compra asociadas al usuario autenticado con paginación.
+    Filtra órdenes pagadas (pagado=True).
+    """
+    user_id = request.user.id  # ID del usuario autenticado
+    params = {"user": user_id, "pagado": True}  # Filtrar por el usuario y por órdenes pagadas
+
+    # Llamar al helper para obtener las órdenes
+    orders = OrderAPI.list_orders(params)["results"]  # 'results' contiene las órdenes
+
+    # Manejo de paginación
+    page = request.GET.get('page', 1)
+    try:
+        paginator = Paginator(orders, 5)  # Mostrar 5 órdenes por página
+        orders_paginated = paginator.page(page)
+    except PageNotAnInteger:
+        orders_paginated = paginator.page(1)
+    except EmptyPage:
+        orders_paginated = paginator.page(paginator.num_pages)
+
+    # Pasar datos a la plantilla
+    return render(request, "app/account/purchases.html", {
+        "orders": orders_paginated,
+        "paginator": paginator
+    })
+
+@login_required
+def order_detail(request, order_id):
+    """
+    Muestra el detalle de una orden específica.
+    """
+    order = OrderAPI.get_by_id(order_id)  # Obtener la orden desde el helper
+
+    if not order or order.get("user") != request.user.id:
+        return render(request, "app/errors/403.html", status=403)  # No permitido
+
+    return render(request, "app/account/order_detail.html", {"order": order})

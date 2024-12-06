@@ -508,6 +508,10 @@ footer {
 
 }
 
+#cart-toggle i {
+  pointer-events: none; /* Asegura que los clics en el ícono pasen al botón */
+}
+
 .delete-btn {
 
   background-color: #ce1919fb !important;

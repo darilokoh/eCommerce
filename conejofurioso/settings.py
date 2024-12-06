@@ -32,7 +32,7 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['127.0.0.1', '34.230.42.57']
+ALLOWED_HOSTS = ['127.0.0.1', '34.230.42.57', '18.234.166.66']
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.cookie.CookieStorage"
 
@@ -114,7 +114,8 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "https://34.230.42.57"
+    "https://34.230.42.57",
+    "https://18.234.166.66"
 ]
 
 ROOT_URLCONF = 'conejofurioso.urls'
@@ -156,7 +157,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # API_BASE_URL = 'http://127.0.0.1:8000/api/'
 
 # AWS
-API_BASE_URL = 'http://34.230.42.57:8000/api/'
+API_BASE_URL = 'http://18.234.166.66:8000/api/'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases

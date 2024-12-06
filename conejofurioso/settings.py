@@ -15,25 +15,24 @@ import os
 import logging
 from datetime import timedelta
 from dotenv import load_dotenv
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # En produccion debemos eliminar 'default-unsafe-key' del secret key
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEYs','default-unsafe-key')
-
-if SECRET_KEY is None:
-    raise ValueError("DJANGO_SECRET_KEY no esta seteada, definirla en las variables de entorno")
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')  # Corrige el nombre
+if not SECRET_KEY:
+    raise ValueError("La clave secreta (DJANGO_SECRET_KEY) no está definida en .env")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['127.0.0.1', 'darioveramunoz.pythonanywhere.com']
+ALLOWED_HOSTS = ['127.0.0.1', '34.230.42.57']
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.cookie.CookieStorage"
 
@@ -137,36 +136,41 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_HOST_USER = 'dario.vera96@gmail.com'  # Tu dirección de correo electrónico
-EMAIL_HOST_PASSWORD = 'vuvy xsgx vmmp nrll'  # Tu contraseña de correo electrónico
+#EMAIL_HOST_PASSWORD = 'vuvy xsgx vmmp nrll'  # Tu contraseña de correo electrónico
 #el siguiente solo para produccion
-#EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+if not EMAIL_HOST_PASSWORD:
+    raise ValueError("La contraseña de correo (EMAIL_HOST_PASSWORD) no está definida en .env")
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Configuracion API URL
-# API_BASE_URL = 'http://darioveramunoz.pythonanywhere.com/api/'
-API_BASE_URL = 'http://127.0.0.1:8000/api/'
+# Local
+#API_BASE_URL = 'http://127.0.0.1:8000/api/'
+
+# AWS
+API_BASE_URL = 'http://34.230.42.57/api/'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'conejo_furioso',
-#         'USER': 'conejo_furioso',
-#         'PASSWORD': 'conejofurioso2212.',
-#         'HOST': 'localhost',
-#         'PORT': '3306',
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
+    }
+}
 
 
 # Password validation

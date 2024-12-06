@@ -72,12 +72,14 @@ document.addEventListener("click", (event) => {
 
 function toggleCartVisibility() {
   if (!isCartVisible) {
-    cartContainer.classList.remove('hide');
     cartContainer.classList.add('show');
+    cartContainer.classList.remove('hide');
+    document.body.style.overflowX = 'hidden'; // Evita desplazamiento horizontal
     isCartVisible = true;
   } else {
-    cartContainer.classList.remove('show');
     cartContainer.classList.add('hide');
+    cartContainer.classList.remove('show');
+    document.body.style.overflowX = ''; // Restaura desplazamiento normal
     isCartVisible = false;
   }
 }

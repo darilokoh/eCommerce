@@ -526,14 +526,16 @@ footer {
 .cart-container {
   position: fixed;
   top: 0;
-  right: -430px; /* Posiciona el carrito fuera de la pantalla a la derecha */
+  right: 0;
   width: 430px; /* Ancho del carrito */
+  max-width: 100%; /* Asegura que no sea más ancho que la pantalla */
   height: 100%; /* Altura del carrito */
   background-color: white; /* Color de fondo del carrito */
   z-index: 9999; /* Asegura que el carrito esté por encima de otros elementos */
   padding: 10px; /* Espacio interno */
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5); /* Sombra para dar un efecto de elevación */
-  transition: right 0.3s ease-in-out; /* Transición suave para el deslizamiento */
+  transition: transform 0.3s ease-in-out; /* Transición suave para el deslizamiento */
+  transform: translateX(100%); /* Mueve el carrito fuera de la pantalla */
 }
 
 .cart-close-button {
@@ -546,7 +548,12 @@ footer {
   background-color: transparent;
   font-size: 20px;
   cursor: pointer;
-  /* Otros estilos adicionales para el botón "X" */
+}
+
+@media (max-width: 768px) {
+  .cart-container {
+    width: 100%; /* El carrito ocupará toda la pantalla en dispositivos pequeños */
+  }
 }
 
 .card-terms {
@@ -554,11 +561,11 @@ footer {
 }
 
 .cart-container.show {
-  right: 0; /* Muestra el carrito deslizándose hacia la izquierda */
+  transform: translateX(0); /* Muestra el carrito deslizándose hacia la izquierda */
 }
 
 .cart-container.hide {
-  right: -430px; /* Oculta el carrito deslizándose hacia la derecha */
+  transform: translateX(100%); /* Oculta el carrito deslizándose hacia la derecha */
 }
 
 #container-homecards {

@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'corsheaders',
 
 ]
 
@@ -108,6 +109,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "https://34.230.42.57"
 ]
 
 ROOT_URLCONF = 'conejofurioso.urls'
@@ -146,10 +153,10 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Configuracion API URL
 # Local
-#API_BASE_URL = 'http://127.0.0.1:8000/api/'
+# API_BASE_URL = 'http://127.0.0.1:8000/api/'
 
 # AWS
-API_BASE_URL = 'http://34.230.42.57/api/'
+API_BASE_URL = 'http://34.230.42.57:8000/api/'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -223,10 +230,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'app/static'),  # Directorio donde están tus archivos estáticos
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -239,8 +250,6 @@ CACHES = {
     }
 }
 
-
-STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field

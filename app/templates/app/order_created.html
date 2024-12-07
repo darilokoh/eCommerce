@@ -12,6 +12,8 @@
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         padding: 20px;
         margin-bottom: 20px;
+        overflow-x: auto; /* Permite el desplazamiento horizontal */
+        max-width: 100%; /* Evita que el contenido se salga del contenedor */
     }
 
     .success-message {
@@ -42,9 +44,93 @@
         justify-content: center;
         align-items: center;
         min-height: 80vh; /* Ajusta para evitar un diseño demasiado alto */
-        margin: 0 auto; /* Centra el contenedor horizontalmente */
+        margin: 80px auto 0; /* Agrega un margen superior de 80px */
         padding: 20px;
-      }
+    }
+
+    .table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%; /* La tabla ocupa todo el ancho del contenedor */
+        max-width: 100%; /* No excede el ancho del contenedor */
+        margin: 0 auto;
+        background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .table th,
+    .table td {
+        padding: 15px; /* Mayor espacio interno */
+        text-align: center; /* Centrar contenido */
+        border-bottom: 1px solid #ddd; /* Bordes internos sutiles */
+        font-size: 1rem;
+        font-family: 'Arial', sans-serif; /* Fuente clara y moderna */
+    }
+    
+    .table thead th {
+        background-color: #000000; /* Fondo negro */
+        color: #ffffff; /* Texto blanco */
+        font-weight: bold; /* Resaltado */
+        text-transform: uppercase; /* Letras capitales */
+        letter-spacing: 1px; /* Separación entre letras */
+        border-bottom: 2px solid #333333; /* Línea fuerte debajo de cabecera */
+    }
+    
+    .table tbody tr {
+        transition: background-color 0.3s ease; /* Transición suave al pasar el cursor */
+    }
+    
+    .table tbody tr:nth-child(even) {
+        background-color: #f8f9fa; /* Fondo alternado */
+    }
+    
+    .table tbody tr:hover {
+        background-color: #d6eaff; /* Fondo al pasar el cursor */
+    }
+    
+    .table tfoot th {
+        background-color: #f1f1f1; /* Fondo claro */
+        font-weight: bold;
+        color: #333; /* Color del texto */
+        font-size: 1.1rem; /* Fuente ligeramente más grande */
+    }
+    
+    .client-info {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background-color: #f8f9fa;
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+    .client-info h3 {
+        margin-bottom: 15px;
+        font-size: 1.25rem;
+        color: #000;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+    .client-info p {
+        margin: 5px 0;
+        color: #333;
+    }
+
+    .order-number {
+        font-size: 1.25rem; /* Tamaño de letra grande */
+        font-weight: bold; /* Texto en negrita */
+        color: #007bff; /* Color azul para resaltar */
+        margin-bottom: 15px; /* Separación inferior */
+        text-align: center; /* Centrado */
+        text-transform: uppercase; /* Mayúsculas */
+    }
+    
+    .order-number span {
+        color: #000; /* Contraste para el número */
+    }
+    
 </style>
 {% endblock %}
 
@@ -52,20 +138,59 @@
 <div class="container" id="content-wrapper">
     <div class="row">
         <!-- Card 1: Mensaje de éxito -->
-        <div class="col-12 col-md-6">
+        <div class="col-12 col-md-8">
             <div class="card success-message">
                 <h1>Orden de compra exitosa</h1>
                 <p>¡Solo un poco más! ¡Elijamos el medio de pago para esa orden!</p>
-                <!-- Mostrar totales en CLP y USD -->
-                <div class="totals">
-                    <p><strong>Total en CLP:</strong> <span id="cart-total-clp"></span></p>
-                    <p><strong>Total en USD:</strong> <span id="cart-total"></span></p>
+                <p class="order-number"><strong>Número de Orden:</strong> <span>#{{ order.order_id }}</span></p>
+        
+                <!-- Tabla de detalles de la orden -->
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio Unitario</th>
+                            <th>Cantidad</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order_items %}
+                        <tr>
+                            <td>{{ item.product_name }}</td>
+                            <td>{{ item.product_price }}</td>
+                            <td>{{ item.amount }}</td>
+                            <td>{{ item.total_price }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="3">Total (CLP):</th>
+                            <th id="cart-total-clp"></th>
+                        </tr>
+                        <tr>
+                            <th colspan="3">Total (USD):</th>
+                            <th id="cart-total-usd"></th>
+                        </tr>
+                    </tfoot>
+                </table>                                
+
+                <!-- Información del cliente -->
+                <div class="client-info mt-4">
+                    <h3>Información del Cliente</h3>
+                    <p><strong>Nombre Completo:</strong> {{ client_data.name }}</p>
+                    <p><strong>Email:</strong> {{ client_data.email }}</p>
+                    <p><strong>Región:</strong> {{ client_data.region }}</p>
+                    <p><strong>Comuna:</strong> {{ client_data.municipality }}</p>
+                    <p><strong>Dirección:</strong> {{ client_data.address }}</p>
+                    <p><strong>Teléfono:</strong> {{ client_data.phone }}</p>
                 </div>
             </div>
-        </div>
+        </div>        
 
         <!-- Card 2: Opciones de pago -->
-        <div class="col-12 col-md-6">
+        <div class="col-12 col-md-4">
             <div class="card payment-options">
                 <h2>Opciones de Pago</h2>
                 <div id="paypal-button-container"></div>
@@ -109,21 +234,23 @@
         }
     }).render('#paypal-button-container');
 
-    // Función para convertir el total de CLP a dólares
+    // Calcula y muestra el total en USD
     function convertToUSD(totalCLP) {
-        var conversionRate = 0.00124;
+        var conversionRate = 0.00124; // Tasa de conversión
         var totalUSD = totalCLP * conversionRate;
-        return totalUSD.toFixed(2);
+        return totalUSD;
     }
 
-    // Obtener el total en CLP desde la variable de contexto
-    var totalCLP = parseInt("{{ cart_total }}");
+    document.addEventListener("DOMContentLoaded", function () {
+        // Obtener el total en CLP desde la variable de contexto
+        var totalCLP = parseInt("{{ cart_total|default:'0' }}") || 0;
 
-    // Calcular el total en USD llamando a la función de conversión
-    var totalUSD = convertToUSD(totalCLP);
+        // Calcular el total en USD llamando a la función de conversión
+        var totalUSD = convertToUSD(totalCLP);
 
-    // Mostrar los totales en la página
-    document.getElementById("cart-total-clp").textContent = totalCLP.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
-    document.getElementById("cart-total").textContent = totalUSD;
+        // Mostrar los totales en la página
+        document.getElementById("cart-total-clp").textContent = totalCLP.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
+        document.getElementById("cart-total-usd").textContent = totalUSD.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    });
 </script>
 {% endblock %}

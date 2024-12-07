@@ -1,0 +1,110 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Confirmación de tu compra</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .email-header {
+            display: flex;
+            align-items: center;
+            background-color: #007bff;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+        }
+        .email-header img {
+            max-height: 50px;
+            margin-right: 10px;
+        }
+        .email-header h2 {
+            margin: 0;
+        }
+        .email-body {
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .email-body p {
+            margin: 8px 0;
+        }
+        .email-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .email-table th,
+        .email-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        .email-table th {
+            background-color: #007bff;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+        .email-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #555555;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <img src="https://i.imgur.com/W7UDErJ.png" alt="Logo" style="max-height: 50px; margin-right: 10px;">
+            <h2>¡Gracias por tu compra!</h2>
+        </div>
+        <div class="email-body">
+            <p><strong>Número de Orden:</strong> {{ order.order_id }}</p>
+            <p><strong>Fecha:</strong> {{ order.created_at }}</p>
+            <p><strong>Cliente:</strong> {{ order.name }}</p>
+            <p><strong>Correo:</strong> {{ order.email }}</p>
+            <p><strong>Teléfono:</strong> {{ order.phone }}</p>
+            <p><strong>Dirección:</strong> {{ order.address }}</p>
+            <p><strong>Total:</strong> ${{ order.accumulated }}</p>
+
+            <h3>Detalles de los productos:</h3>
+            <table class="email-table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order_items %}
+                    <tr>
+                        <td>{{ item.product_name }}</td>
+                        <td>{{ item.amount }}</td>
+                        <td>${{ item.product_price }}</td>
+                        <td>${{ item.total_price }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="email-footer">
+            <p>Si tienes alguna pregunta sobre tu compra, contáctanos en <a href="mailto:{{ order.email }}">nuestro soporte</a>.</p>
+        </div>
+    </div>
+</body>
+</html>

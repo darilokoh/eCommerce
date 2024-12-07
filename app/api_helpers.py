@@ -841,6 +841,24 @@ class RentalOrderItemAPI:
         
 # Helpers for Order API
 class OrderAPI:
+
+    @staticmethod
+    def get_by_id(order_id):
+        """
+        Obtiene los detalles de una orden específica por su ID.
+        """
+        url = f"{settings.API_BASE_URL}orders/{order_id}/"
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"Error al obtener detalles de la orden: {response.status_code}, {response.content}")
+                return None
+        except requests.exceptions.RequestException as e:
+            print(f"Excepción al obtener detalles de la orden: {str(e)}")
+            return None
+
     @staticmethod
     def get_last_order_by_user(user_id):
         """
@@ -934,6 +952,24 @@ class OrderAPI:
         except requests.exceptions.RequestException as e:
             print(f"Excepción al obtener estadísticas: {str(e)}")
             return {}
+        
+    @staticmethod
+    def patch_order_paid_status(order_id):
+        """
+        Actualiza el estado de la orden a pagado (pagado = True).
+        """
+        url = f"{settings.API_BASE_URL}orders/{order_id}/"
+        data = {"pagado": True}  # Cambiar el estado a pagado
+        try:
+            response = requests.patch(url, json=data)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"Error al actualizar el estado de la orden: {response.status_code}, {response.content}")
+                return None
+        except requests.exceptions.RequestException as e:
+            print(f"Excepción al actualizar el estado de la orden: {str(e)}")
+            return None
         
 # Helpers for OrderItem API
 class OrderItemAPI:

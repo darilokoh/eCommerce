@@ -871,3 +871,17 @@ label.required::after {
   height: 300px; /* Ajusta la altura según lo necesario */
   margin: auto; /* Centra el gráfico dentro de su columna */
 }
+
+.alert-development {
+  text-align: center; /* Centra el contenido */
+  background-color: #f8d7da; /* Rojo claro (alerta) */
+  color: #721c24; /* Color del texto más oscuro */
+  padding: 15px; /* Espaciado interno */
+  border: 1px solid #f5c6cb; /* Borde rojo claro */
+  border-radius: 5px; /* Bordes redondeados */
+  font-size: 16px; /* Tamaño del texto */
+  font-weight: bold; /* Texto en negrita */
+  margin: 20px auto; /* Espaciado externo */
+  max-width: 80%; /* Ancho máximo para evitar que se extienda */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra ligera */
+}

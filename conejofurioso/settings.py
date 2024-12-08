@@ -156,7 +156,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # API_BASE_URL = 'http://127.0.0.1:8000/api/'
 
 # AWS
-API_BASE_URL = 'http://3.87.224.80:8000/api/'
+API_BASE_URL = 'http://3.87.224.80/api/'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases

@@ -30,9 +30,9 @@ if not SECRET_KEY:
     raise ValueError("La clave secreta (DJANGO_SECRET_KEY) no está definida en .env")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['127.0.0.1', '3.87.224.80']
+ALLOWED_HOSTS = ['127.0.0.1', '3.84.148.49']
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.cookie.CookieStorage"
 
@@ -114,7 +114,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "https://3.87.224.80"
+    "https://3.84.148.49"
 ]
 
 ROOT_URLCONF = 'conejofurioso.urls'
@@ -156,7 +156,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # API_BASE_URL = 'http://127.0.0.1:8000/api/'
 
 # AWS
-API_BASE_URL = 'http://3.87.224.80/api/'
+API_BASE_URL = 'http://3.84.148.49/api/'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases

@@ -1510,7 +1510,7 @@ def webpay_init_transaction(request):
             return JsonResponse({"error": "Datos faltantes en la solicitud de transacción"})
 
         # Configuración de Transbank para el ambiente de integración
-        return_url = "http://127.0.0.1:8000/webpay/return/"
+        return_url = "http://3.84.148.49/webpay/return/"
         tx = Transaction(
             WebpayOptions(
                 "597055555532",                       

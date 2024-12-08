@@ -1894,5 +1894,9 @@ def order_detail(request, order_id):
 
     if not order or order.get("user") != request.user.id:
         return render(request, "app/errors/403.html", status=403)  # No permitido
+    
+    # Calcular total por producto
+    for item in order["items"]:
+        item["total"] = item["amount"] * item["product_price"]
 
     return render(request, "app/account/order_detail.html", {"order": order})

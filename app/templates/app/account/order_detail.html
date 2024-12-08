@@ -27,7 +27,7 @@
             <td>{{ item.product_name }}</td>
             <td>{{ item.amount }}</td>
             <td>${{ item.product_price }}</td>
-            <td>${{ item.amount|add:item.product_price }}</td>
+            <td>${{ item.total }}</td>
           </tr>
           {% endfor %}
         </tbody>

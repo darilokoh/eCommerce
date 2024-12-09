@@ -199,6 +199,11 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
 
+        # Filtra por usuario autenticado si está presente
+        user_id = self.request.query_params.get('user')
+        if user_id:
+            queryset = queryset.filter(user__id=user_id)
+
         # Filtro por rango de fechas
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')

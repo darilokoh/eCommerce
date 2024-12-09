@@ -151,3 +151,39 @@ $(document).ready(function() {
       }
   });
 });
+
+// Agregar o descontar productos del carrito
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".update-cart").forEach(button => {
+      button.addEventListener("click", function () {
+          const productId = this.dataset.productId;  // ID del producto
+          const action = this.dataset.action;  // Acción: 'add' o 'subtract'
+
+          // Construir la URL para la acción
+          const url = action === "add" ? `/add/${productId}` : `/subtract/${productId}`;
+
+          fetch(url, {
+              method: "GET",
+              headers: {
+                  "X-Requested-With": "XMLHttpRequest"  // Detecta como solicitud AJAX
+              }
+          })
+          .then(response => response.json())  // Convertir respuesta a JSON
+          .then(data => {
+              if (data.success) {
+                  // Actualizar cantidad y total en la tabla
+                  document.getElementById(`product-quantity-${productId}`).innerText = data.new_quantity;
+
+                  // Actualizar el total acumulado del producto
+                  const total = data.new_quantity * data.product_price;
+                  document.getElementById(`product-total-${productId}`).innerText = total;
+
+                  alert(data.message);  // Mostrar mensaje de éxito (puede ser reemplazado con notificaciones)
+              } else {
+                  alert(data.message);  // Mostrar mensaje de error
+              }
+          })
+          .catch(error => console.error("Error:", error));
+      });
+  });
+});

@@ -776,7 +776,7 @@ def add_prod_cart(request, product_id):
             cart.add(product_data)
             response = {
                 "success": True,
-                "message": "Product added to cart successfully.",
+                "message": "Producto agregado al carrito exitosamente.",
                 "new_quantity": cart.get_product_quantity(product_data),
                 "product_id": product_id,
             }
@@ -813,7 +813,7 @@ def subtract_product_cart(request, product_id):
             cart.subtract(product)
             response = {
                 "success": True,
-                "message": f"{product['name']} quantity decreased.",
+                "message": f"{product['name']} descontado del carrito.",
                 "new_quantity": cart.get_product_quantity(product),
                 "product_id": product_id,
             }

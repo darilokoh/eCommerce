@@ -140,20 +140,19 @@
           </thead>
           <tbody>
             {% if request.session.cart.items %}
-              {% for key, value in request.session.cart.items %}
-              <tr id="product-row-{{ value.product_id }}">
-                <td><strong>{{ value.product_name }}</strong></td>
-                <td>{{ value.product_price }}</td>
-                <td>
-                  <button class="update-cart btn btn-dark badge-dark" data-action="subtract" data-product-id="{{ value.product_id }}">-</button>
-                  <span id="product-quantity-{{ value.product_id }}">{{ value.amount }}</span>
-                  <button class="update-cart btn btn-dark badge-dark" data-action="add" data-product-id="{{ value.product_id }}">+</button>
-                </td>
-                <td id="product-total-{{ value.product_id }}">
-                  {{ value.accumulated }}
-                </td>
-              </tr>
-              {% endfor %}
+            {% for key, value in request.session.cart.items %}
+            <tr>
+              <td><strong>{{value.product_name}}</strong></td>
+              <td>{{value.product_price}}</td>
+              <td>
+                <a href="{% url 'Sub' value.product_id %}" class="badge btn btn-dark badge-dark">-</a>
+                {{value.amount}}
+                <a href="{% url 'Add' value.product_id %}" class="badge btn btn-dark badge-dark">+</a>
+                
+              </td>
+              <td>{{value.accumulated}}</td>
+            </tr>
+            {% endfor %}
             {% else %}
             <tr>
               <td colspan="4">
